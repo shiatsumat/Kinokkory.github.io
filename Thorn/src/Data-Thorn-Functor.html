@@ -97,7 +97,7 @@
 <a name="line-88"></a>&gt; testpartial :: (Int,Int,Int)
 <a name="line-89"></a>&gt; testpartial = $(autofmap $[t|(,,) Int|]) (+10) (+20) (1,1,1) -- (1,11,21)
 <a name="line-90"></a>
-<a name="line-91"></a>    You can use type variants @'T0', 'T1', .., 'T9'@ to represent any type.
+<a name="line-91"></a>    You can use type variants @'T0', 'T1', ..., 'T9'@ to represent any type.
 <a name="line-92"></a>
 <a name="line-93"></a>&gt; testpartial' :: (String,Int,Int)
 <a name="line-94"></a>&gt; testpartial' = $(autofmap $[t|(,,) T0|]) (+10) (+20) ("hello",1,1) -- ("hello",11,21)
@@ -106,7 +106,7 @@
 <a name="line-97"></a>
 <a name="line-98"></a><span class='hs-comment'>{- $synonym
 <a name="line-99"></a>
-<a name="line-100"></a>Interestingly, it works for type synonym.
+<a name="line-100"></a>Interestingly, it works for type synonyms.
 <a name="line-101"></a>
 <a name="line-102"></a>&gt; type a :&lt;- b = b -&gt; a
 <a name="line-103"></a>&gt; varnuf :: [Variance]
@@ -117,7 +117,7 @@
 <a name="line-108"></a>
 <a name="line-109"></a><span class='hs-comment'>{- $variance
 <a name="line-110"></a>
-<a name="line-111"></a>It works for fixed-variance and free-variance. See how @autofunctorize@ works for free-variance.
+<a name="line-111"></a>It works for free-variance and fixed-variance. See how @autofunctorize@ works for free-variance.
 <a name="line-112"></a>
 <a name="line-113"></a>&gt; data What a b c = What1 c (a -&gt; c) | What2 a
 <a name="line-114"></a>&gt; 
@@ -134,7 +134,7 @@
 <a name="line-125"></a>
 <a name="line-126"></a><span class='hs-comment'>{- $recursive
 <a name="line-127"></a>
-<a name="line-128"></a>It works for recursive types.
+<a name="line-128"></a>It works for recursive datatypes.
 <a name="line-129"></a>
 <a name="line-130"></a>&gt; data List a = Nil | a :* (List a) deriving Show
 <a name="line-131"></a>&gt; 
@@ -171,7 +171,7 @@
 <a name="line-162"></a>-}</span>
 <a name="line-163"></a>
 <a name="line-164"></a><a name="autofmap"></a><span class='hs-comment'>-- |</span>
-<a name="line-165"></a><span class='hs-comment'>-- @autofmap t@ generates a functor function of the type @t@.</span>
+<a name="line-165"></a><span class='hs-comment'>-- @autofmap t@ generates an fmap of the type @t@.</span>
 <a name="line-166"></a><span class='hs-definition'>autofmap</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>TypeQ</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ExpQ</span>
 <a name="line-167"></a><span class='hs-definition'>autofmap</span> <span class='hs-varid'>t</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
 <a name="line-168"></a>    <span class='hs-layout'>(</span><span class='hs-varid'>n</span><span class='hs-layout'>,</span><span class='hs-varid'>tx</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>t</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>type2typex</span> <span class='hs-conid'>[]</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>applySpecial</span> <span class='hs-num'>0</span>
@@ -234,11 +234,11 @@
 <a name="line-225"></a><a name="Variance"></a><span class='hs-keyword'>data</span> <span class='hs-conid'>Variance</span> <span class='hs-keyglyph'>=</span>
 <a name="line-226"></a>    <span class='hs-comment'>-- | Covariance, one of a normal functor.</span>
 <a name="line-227"></a>    <span class='hs-conid'>Co</span>
-<a name="line-228"></a>    <span class='hs-comment'>-- | Contravariance, a dual of covariance.</span>
+<a name="line-228"></a>    <span class='hs-comment'>-- | Contravariance, the dual of covariance.</span>
 <a name="line-229"></a>  <span class='hs-keyglyph'>|</span> <span class='hs-conid'>Contra</span>
-<a name="line-230"></a>    <span class='hs-comment'>-- | Free-variance, or novariance, being supposed to satisfy either covariance or contravariance.</span>
+<a name="line-230"></a>    <span class='hs-comment'>-- | Free-variance, or invariance, being supposed to satisfy either covariance or contravariance.</span>
 <a name="line-231"></a>  <span class='hs-keyglyph'>|</span> <span class='hs-conid'>Free</span>
-<a name="line-232"></a>    <span class='hs-comment'>-- | Fixed-variance, or invariance, being suppoesed to satisfy both covariance and contravariance.</span>
+<a name="line-232"></a>    <span class='hs-comment'>-- | Fixed-variance, or nonvariance, being supposed to satisfy both covariance and contravariance.</span>
 <a name="line-233"></a>  <span class='hs-keyglyph'>|</span> <span class='hs-conid'>Fixed</span> <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Show</span><span class='hs-layout'>,</span> <span class='hs-conid'>Read</span><span class='hs-layout'>)</span>
 <a name="line-234"></a>
 <a name="line-235"></a><a name="instance%20Monoid%20Variance"></a><span class='hs-comment'>-- | @v1 `mappend` v2@ means to be supposed to satisfy both @v1@ and @v2@.</span>
@@ -304,7 +304,7 @@
 <a name="line-295"></a><span class='hs-definition'>autovariance'</span> <span class='hs-varid'>v</span> <span class='hs-varid'>dts</span> <span class='hs-layout'>(</span><span class='hs-conid'>ListTx</span> <span class='hs-varid'>tx</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>autovariance'</span> <span class='hs-varid'>v</span> <span class='hs-varid'>dts</span> <span class='hs-varid'>tx</span>
 <a name="line-296"></a>
 <a name="line-297"></a><a name="autofmaptype"></a><span class='hs-comment'>-- |</span>
-<a name="line-298"></a><span class='hs-comment'>-- @autofmaptype t@ provides the type of @$(autofmap t)@.</span>
+<a name="line-298"></a><span class='hs-comment'>-- @autofmaptype t@ provides the type of @$('autofmap' t)@.</span>
 <a name="line-299"></a><span class='hs-definition'>autofmaptype</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>TypeQ</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>TypeQ</span>
 <a name="line-300"></a><span class='hs-definition'>autofmaptype</span> <span class='hs-varid'>t</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
 <a name="line-301"></a>    <span class='hs-varid'>tx</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>type2typex</span> <span class='hs-conid'>[]</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>=&lt;&lt;</span> <span class='hs-varid'>t</span>
@@ -339,12 +339,12 @@
 <a name="line-330"></a>    <span class='hs-varid'>return</span> <span class='hs-varop'>$</span> <span class='hs-conid'>ForallT</span> <span class='hs-varid'>tvs</span> <span class='hs-conid'>[]</span> <span class='hs-layout'>(</span><span class='hs-varid'>foldr1</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-varid'>ta</span> <span class='hs-varid'>tb</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>applistT</span> <span class='hs-conid'>ArrowT</span> <span class='hs-keyglyph'>[</span><span class='hs-varid'>ta</span><span class='hs-layout'>,</span><span class='hs-varid'>tb</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span> <span class='hs-layout'>(</span><span class='hs-varid'>funcs</span><span class='hs-varop'>++</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>src</span><span class='hs-keyglyph'>]</span><span class='hs-varop'>++</span><span class='hs-keyglyph'>[</span><span class='hs-varid'>dst</span><span class='hs-keyglyph'>]</span><span class='hs-layout'>)</span><span class='hs-layout'>)</span>
 <a name="line-331"></a>
 <a name="line-332"></a><a name="autofmapdec"></a><span class='hs-comment'>-- |</span>
-<a name="line-333"></a><span class='hs-comment'>-- @autofmapdec s t@ provides a declaration of a functor function for the type @t@ with the name @s@, with a type signature.</span>
+<a name="line-333"></a><span class='hs-comment'>-- @autofmapdec s t@ provides a declaration of an fmap for the type @t@ with the name @s@, with a type signature.</span>
 <a name="line-334"></a><span class='hs-definition'>autofmapdec</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>String</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>TypeQ</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>DecsQ</span>
 <a name="line-335"></a><span class='hs-definition'>autofmapdec</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>gendec1</span> <span class='hs-varid'>autofmap</span> <span class='hs-varid'>autofmaptype</span>
 <a name="line-336"></a>
 <a name="line-337"></a><a name="autofunctorize"></a><span class='hs-comment'>-- |</span>
-<a name="line-338"></a><span class='hs-comment'>-- @autofunctorize t@ provides instance delcarations of the type @t@, for the suitable functor classes : Funtor, Contravariant, Bifunctor, or Profunctor. Multiple classes can be suitable for @t@, when one of the variances of @t@ is @Free@.</span>
+<a name="line-338"></a><span class='hs-comment'>-- @autofunctorize t@ provides instance delcarations of the type @t@, for the suitable functor classes : 'Functor', 'Data.Functor.Contravariant.Contravariant', 'Data.Bifunctor.Bifunctor', or 'Data.Profunctor.Profunctor'. Multiple classes can be suitable for @t@, when one of the variances of @t@ is 'Free'.</span>
 <a name="line-339"></a><span class='hs-definition'>autofunctorize</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>TypeQ</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>DecsQ</span>
 <a name="line-340"></a><span class='hs-definition'>autofunctorize</span> <span class='hs-varid'>t</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
 <a name="line-341"></a>    <span class='hs-varid'>vs</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>autovarianceRaw</span> <span class='hs-varid'>t</span>

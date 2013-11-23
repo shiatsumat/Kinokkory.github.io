@@ -21,7 +21,7 @@
 <a name="line-12"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Data</span><span class='hs-varop'>.</span><span class='hs-conid'>Thorn</span><span class='hs-varop'>.</span><span class='hs-conid'>Internal</span>
 <a name="line-13"></a>
 <a name="line-14"></a><span class='hs-comment'>{- $typevariants
-<a name="line-15"></a>    These types @'T0', .. 'T9'@ are used for representing type variants.
+<a name="line-15"></a>    These types @'T0', ..., 'T9'@ are used for representing type variants.
 <a name="line-16"></a>
 <a name="line-17"></a>&gt; testtypevariant :: (String,Int,Int)
 <a name="line-18"></a>&gt; testtypevariant = $(autofmap $[t|(,,) T0|]) (+10) (+20) ("hello",1,1) -- ("hello",11,21)
