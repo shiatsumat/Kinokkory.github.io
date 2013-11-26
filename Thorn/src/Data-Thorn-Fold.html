@@ -38,14 +38,14 @@
 <a name="line-29"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Applicative</span>
 <a name="line-30"></a>
 <a name="line-31"></a><span class='hs-comment'>{- $fold
-<a name="line-32"></a>    Thorn generates folds and unfolds from various kinds of recursive datatypes, including mutually recursive ones.
+<a name="line-32"></a>    You can generate folds and unfolds from various kinds of recursive datatypes, including mutually recursive ones.
 <a name="line-33"></a>-}</span>
 <a name="line-34"></a>
 <a name="line-35"></a><span class='hs-comment'>{- $basic
 <a name="line-36"></a>
-<a name="line-37"></a>It's a piece of cake.
+<a name="line-37"></a>    It's a piece of cake.
 <a name="line-38"></a>
-<a name="line-39"></a>Note tht @foldlist@ is analogous with 'foldr' and @unfoldlist@ with 'unfoldr'.
+<a name="line-39"></a>    Note tht @foldlist@ is analogous with 'foldr' and @unfoldlist@ with 'unfoldr'.
 <a name="line-40"></a>
 <a name="line-41"></a>&gt; data List a = Nil | a :* (List a) deriving Show
 <a name="line-42"></a>&gt; 
@@ -81,9 +81,9 @@
 <a name="line-72"></a>
 <a name="line-73"></a><span class='hs-comment'>{- $mutual
 <a name="line-74"></a>
-<a name="line-75"></a>It also works for mutual recursion.
+<a name="line-75"></a>    It also works for mutual recursion.
 <a name="line-76"></a>
-<a name="line-77"></a>It's just an extension of simple recursion. Take it easy.
+<a name="line-77"></a>    Just an extension of simple recursion. Take it easy.
 <a name="line-78"></a>
 <a name="line-79"></a>&gt; data Rose x = x :-&lt; (Forest x) deriving Show
 <a name="line-80"></a>&gt; data Forest x = F [Rose x] deriving Show
@@ -163,13 +163,13 @@
 <a name="line-154"></a><a name="autoin"></a><span class='hs-definition'>autoin</span> <span class='hs-keyglyph'>::</span>
 <a name="line-155"></a>    <span class='hs-conid'>TypeQ</span> <span class='hs-comment'>-- ^ @u@, nonrecursive datatype</span>
 <a name="line-156"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>TypeQ</span> <span class='hs-comment'>-- ^ @t@, fixpoint of @u@</span>
-<a name="line-157"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ExpQ</span> <span class='hs-comment'>-- ^ function with a type @u x0 .. xn t -&gt; t x0 .. xn@</span>
+<a name="line-157"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ExpQ</span> <span class='hs-comment'>-- ^ function with a type @u x0 .. xn (t x0 .. xn) -&gt; t x0 .. xn@</span>
 <a name="line-158"></a><span class='hs-definition'>autoin</span> <span class='hs-varid'>u</span> <span class='hs-varid'>t</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>autoinMutual</span> <span class='hs-keyglyph'>[</span><span class='hs-layout'>(</span><span class='hs-varid'>u</span><span class='hs-layout'>,</span><span class='hs-varid'>t</span><span class='hs-layout'>)</span><span class='hs-keyglyph'>]</span> <span class='hs-num'>0</span>
 <a name="line-159"></a>
 <a name="line-160"></a><a name="autoout"></a><span class='hs-definition'>autoout</span> <span class='hs-keyglyph'>::</span>
 <a name="line-161"></a>    <span class='hs-conid'>TypeQ</span> <span class='hs-comment'>-- ^ @u@, nonrecursive datatype</span>
 <a name="line-162"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>TypeQ</span> <span class='hs-comment'>-- ^ @t@, fixpoint of @u@</span>
-<a name="line-163"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ExpQ</span> <span class='hs-comment'>-- ^ function with a type @t x0 .. xn -&gt; u x0 .. xn t@</span>
+<a name="line-163"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ExpQ</span> <span class='hs-comment'>-- ^ function with a type @t x0 .. xn -&gt; u x0 .. xn (t x0 .. xn)@</span>
 <a name="line-164"></a><span class='hs-definition'>autoout</span> <span class='hs-varid'>u</span> <span class='hs-varid'>t</span> <span class='hs-keyglyph'>=</span> <span class='hs-varid'>autooutMutual</span> <span class='hs-keyglyph'>[</span><span class='hs-layout'>(</span><span class='hs-varid'>u</span><span class='hs-layout'>,</span><span class='hs-varid'>t</span><span class='hs-layout'>)</span><span class='hs-keyglyph'>]</span> <span class='hs-num'>0</span>
 <a name="line-165"></a>
 <a name="line-166"></a><a name="autohylo"></a><span class='hs-definition'>autohylo</span> <span class='hs-keyglyph'>::</span>
@@ -257,7 +257,7 @@
 <a name="line-248"></a><span class='hs-definition'>autoinMutual</span> <span class='hs-keyglyph'>::</span>
 <a name="line-249"></a>    <span class='hs-keyglyph'>[</span><span class='hs-layout'>(</span><span class='hs-conid'>TypeQ</span><span class='hs-layout'>,</span><span class='hs-conid'>TypeQ</span><span class='hs-layout'>)</span><span class='hs-keyglyph'>]</span> <span class='hs-comment'>-- ^ @[(u0,t0), .., (un,tn)]@; @ui@ is a nonrecursive datatype and @ti@ is a fixpoint of @ui@</span>
 <a name="line-250"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span> <span class='hs-comment'>-- ^ @k@, index</span>
-<a name="line-251"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ExpQ</span> <span class='hs-comment'>-- ^ function with a type @uk x0 .. xm t0 .. tn -&gt; tk x0 .. xm@</span>
+<a name="line-251"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ExpQ</span> <span class='hs-comment'>-- ^ function with a type @uk x0 .. xm (t0 x0 .. xm) .. (tn x0 .. xm) -&gt; tk x0 .. xm@</span>
 <a name="line-252"></a><span class='hs-definition'>autoinMutual</span> <span class='hs-varid'>uts</span> <span class='hs-varid'>k</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
 <a name="line-253"></a>    <span class='hs-varid'>cxsus</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>u</span><span class='hs-layout'>,</span><span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>u</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>type2typex</span> <span class='hs-conid'>[]</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>applyFixed</span> <span class='hs-num'>0</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>return</span> <span class='hs-varop'>.</span> <span class='hs-varid'>getcxs</span> <span class='hs-varop'>.</span> <span class='hs-varid'>snd</span><span class='hs-layout'>)</span> <span class='hs-varid'>uts</span>
 <a name="line-254"></a>    <span class='hs-varid'>cxsts</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-keyword'>_</span><span class='hs-layout'>,</span><span class='hs-varid'>t</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>t</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>type2typex</span> <span class='hs-conid'>[]</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>applyFixed</span> <span class='hs-num'>0</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>return</span> <span class='hs-varop'>.</span> <span class='hs-varid'>getcxs</span> <span class='hs-varop'>.</span> <span class='hs-varid'>snd</span><span class='hs-layout'>)</span> <span class='hs-varid'>uts</span>
@@ -276,7 +276,7 @@
 <a name="line-267"></a><span class='hs-definition'>autooutMutual</span> <span class='hs-keyglyph'>::</span>
 <a name="line-268"></a>    <span class='hs-keyglyph'>[</span><span class='hs-layout'>(</span><span class='hs-conid'>TypeQ</span><span class='hs-layout'>,</span><span class='hs-conid'>TypeQ</span><span class='hs-layout'>)</span><span class='hs-keyglyph'>]</span> <span class='hs-comment'>-- ^ @[(u0,t0), .., (un,tn)]@; @ui@ is a nonrecursive datatype and @ti@ is a fixpoint of @ui@</span>
 <a name="line-269"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Int</span> <span class='hs-comment'>-- ^ @k@, index</span>
-<a name="line-270"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ExpQ</span> <span class='hs-comment'>-- ^ function with a type @tk x0 .. xm -&gt; uk x0 .. xm t0 .. tn@</span>
+<a name="line-270"></a> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>ExpQ</span> <span class='hs-comment'>-- ^ function with a type @tk x0 .. xm -&gt; uk x0 .. xm (t0 x0 .. xm) .. (tn x0 .. xm)@</span>
 <a name="line-271"></a><span class='hs-definition'>autooutMutual</span> <span class='hs-varid'>uts</span> <span class='hs-varid'>k</span> <span class='hs-keyglyph'>=</span> <span class='hs-keyword'>do</span>
 <a name="line-272"></a>    <span class='hs-varid'>cxsus</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-varid'>u</span><span class='hs-layout'>,</span><span class='hs-keyword'>_</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>u</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>type2typex</span> <span class='hs-conid'>[]</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>applyFixed</span> <span class='hs-num'>0</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>return</span> <span class='hs-varop'>.</span> <span class='hs-varid'>getcxs</span> <span class='hs-varop'>.</span> <span class='hs-varid'>snd</span><span class='hs-layout'>)</span> <span class='hs-varid'>uts</span>
 <a name="line-273"></a>    <span class='hs-varid'>cxsts</span> <span class='hs-keyglyph'>&lt;-</span> <span class='hs-varid'>mapM</span> <span class='hs-layout'>(</span><span class='hs-keyglyph'>\</span><span class='hs-layout'>(</span><span class='hs-keyword'>_</span><span class='hs-layout'>,</span><span class='hs-varid'>t</span><span class='hs-layout'>)</span> <span class='hs-keyglyph'>-&gt;</span> <span class='hs-varid'>t</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>type2typex</span> <span class='hs-conid'>[]</span> <span class='hs-conid'>[]</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>applyFixed</span> <span class='hs-num'>0</span> <span class='hs-varop'>&gt;&gt;=</span> <span class='hs-varid'>return</span> <span class='hs-varop'>.</span> <span class='hs-varid'>getcxs</span> <span class='hs-varop'>.</span> <span class='hs-varid'>snd</span><span class='hs-layout'>)</span> <span class='hs-varid'>uts</span>

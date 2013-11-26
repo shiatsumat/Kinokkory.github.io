@@ -52,7 +52,7 @@
 <a name="line-43"></a><span class='hs-keyword'>import</span> <span class='hs-conid'>Control</span><span class='hs-varop'>.</span><span class='hs-conid'>Monad</span><span class='hs-varop'>.</span><span class='hs-conid'>State</span>
 <a name="line-44"></a>
 <a name="line-45"></a><span class='hs-comment'>{- $functor
-<a name="line-46"></a>    Thorn generates functors from various kinds of datatypes.
+<a name="line-46"></a>    You can generate functors from various kinds of datatypes.
 <a name="line-47"></a>
 <a name="line-48"></a>    Quite surprisingly, it still works for any arities, co\/contra\/free\/fixed-variances, partially applied types, type synonyms, and mutual recursions.
 <a name="line-49"></a>-}</span>
@@ -106,7 +106,7 @@
 <a name="line-97"></a>
 <a name="line-98"></a><span class='hs-comment'>{- $synonym
 <a name="line-99"></a>
-<a name="line-100"></a>Interestingly, it works for type synonyms.
+<a name="line-100"></a>    Interestingly, it works for type synonyms.
 <a name="line-101"></a>
 <a name="line-102"></a>&gt; type a :&lt;- b = b -&gt; a
 <a name="line-103"></a>&gt; varnuf :: [Variance]
@@ -117,7 +117,7 @@
 <a name="line-108"></a>
 <a name="line-109"></a><span class='hs-comment'>{- $variance
 <a name="line-110"></a>
-<a name="line-111"></a>It works for free-variance and fixed-variance. See how @autofunctorize@ works for free-variance.
+<a name="line-111"></a>    It works for free-variance and fixed-variance. See how @autofunctorize@ works for free-variance.
 <a name="line-112"></a>
 <a name="line-113"></a>&gt; data What a b c = What1 c (a -&gt; c) | What2 a
 <a name="line-114"></a>&gt; 
@@ -134,7 +134,7 @@
 <a name="line-125"></a>
 <a name="line-126"></a><span class='hs-comment'>{- $recursive
 <a name="line-127"></a>
-<a name="line-128"></a>It works for recursive datatypes.
+<a name="line-128"></a>    It works for recursive datatypes.
 <a name="line-129"></a>
 <a name="line-130"></a>&gt; data List a = Nil | a :* (List a) deriving Show
 <a name="line-131"></a>&gt; 
@@ -152,7 +152,7 @@
 <a name="line-143"></a>&gt; testlist :: [Int]
 <a name="line-144"></a>&gt; testlist = toNormalList $ fmap (+10) (fromNormalList [1..5]) -- [11..15]
 <a name="line-145"></a>
-<a name="line-146"></a>It also works for mutually recursive datatypes.
+<a name="line-146"></a>    It also works for mutually recursive datatypes.
 <a name="line-147"></a>
 <a name="line-148"></a>&gt; data Rose a = Rose a (Forest a) deriving Show
 <a name="line-149"></a>&gt; data Forest a = Forest [Rose a] deriving Show
@@ -236,9 +236,9 @@
 <a name="line-227"></a>    <span class='hs-conid'>Co</span>
 <a name="line-228"></a>    <span class='hs-comment'>-- | Contravariance, the dual of covariance.</span>
 <a name="line-229"></a>  <span class='hs-keyglyph'>|</span> <span class='hs-conid'>Contra</span>
-<a name="line-230"></a>    <span class='hs-comment'>-- | Free-variance, or invariance, being supposed to satisfy either covariance or contravariance.</span>
+<a name="line-230"></a>    <span class='hs-comment'>-- | Free-variance, being supposed to satisfy either covariance or contravariance.</span>
 <a name="line-231"></a>  <span class='hs-keyglyph'>|</span> <span class='hs-conid'>Free</span>
-<a name="line-232"></a>    <span class='hs-comment'>-- | Fixed-variance, or nonvariance, being supposed to satisfy both covariance and contravariance.</span>
+<a name="line-232"></a>    <span class='hs-comment'>-- | Fixed-variance, being supposed to satisfy both covariance and contravariance.</span>
 <a name="line-233"></a>  <span class='hs-keyglyph'>|</span> <span class='hs-conid'>Fixed</span> <span class='hs-keyword'>deriving</span> <span class='hs-layout'>(</span><span class='hs-conid'>Show</span><span class='hs-layout'>,</span> <span class='hs-conid'>Read</span><span class='hs-layout'>)</span>
 <a name="line-234"></a>
 <a name="line-235"></a><a name="instance%20Monoid%20Variance"></a><span class='hs-comment'>-- | @v1 `mappend` v2@ means to be supposed to satisfy both @v1@ and @v2@.</span>
