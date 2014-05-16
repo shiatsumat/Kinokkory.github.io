@@ -1,0 +1,339 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN"
+  "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html lang="ja">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <style type="text/css">
+  <!--
+  pre {margin-left:2em;}
+  -->
+  </style>
+  <title>型付きタグレス解釈と型付きコンパイル</title>
+</head>
+<body><div align="center"><a href="../meta-programming/Generative.html">previous</a>  &nbsp; <a href="course/index.html">next</a>  &nbsp; <a href="../Computation/index.html">up</a>  &nbsp; <a href="http://kinokkory.github.io/okmij/">top</a><hr></div>
+<div align="center"><h1>型付きタグレス解釈と型付きコンパイル</h1>
+</div>
+<p>&nbsp;</p>
+<p>We describe a less-known way of implementing <em>typed</em> embedded domain-specific languages in common metalanguages, stressing type preservation, typed compilation, and multiple interpretations. Type preservation statically and patently assures that interpreters never get stuck and hence run more efficiently.</p>
+<ul><li><a href="#tagless-final">Finally Tagless, Partially Evaluated: Tagless Staged Interpreters for Simpler Typed Languages</a></li>
+<li><a href="#typed-compilation">Typed Compilation</a></li>
+<li><a href="#tagless-Eval">Tagless (staged) interpreter typeclass for typed languages</a></li>
+<li><a href="#call-by-any">Parameterizing expressions by the evaluation order</a>
+<br>
+&nbsp;</li>
+<li><a href="#tc-final">Typed compilation to HOAS as emulation of staging</a></li>
+<li><a href="#tc-GADT-tc">Metatypechecking: Staged Typed Compilation into GADT using typeclasses</a></li>
+<li><a href="#tc-GADT">Typed compilation via GADTs</a></li>
+<li><a href="#in-fin">Relating Final and Initial typed tagless representations</a>
+<br>
+&nbsp;</li>
+<li><a href="course/index.html">A course on typed tagless-final interpretations</a></li>
+<li><a href="../formalizations/index.html#intrinsic">Intrinsic encoding</a></li>
+<li><a href="../meta-programming/Generative.html#meta-haskell">Tagless-Staged: a step toward MetaHaskell</a></li></ul>
+<hr>
+<p><a name="tagless-final">&nbsp;</a></p><h2>Finally Tagless, Partially Evaluated: Tagless Staged Interpreters for Simpler Typed Languages</h2>
+<dl><dd>[The Abstract of the paper]
+<br>
+
+ We have built the first <em>family</em> of tagless interpretations for a
+ higher-order typed object language in a typed metalanguage
+ (Haskell or ML) that require no dependent types, generalized algebraic
+ data types, or postprocessing to eliminate tags. The statically
+ type-preserving interpretations include an evaluator, a compiler
+ (or staged evaluator), a partial evaluator, and call-by-name and
+ call-by-value CPS transformers.<p>
+ Our principal technique is to encode de Bruijn or higher-order
+ abstract syntax using combinator functions rather than data constructors.
+ In other words, we represent object terms not in an initial algebra
+ but using the coalgebraic structure of the lambda-calculus.
+ Our representation also simulates inductive maps from types to
+ types, which are required for typed partial evaluation and CPS
+ transformations. Our encoding of an object term abstracts
+ uniformly over the family of ways to interpret it, yet statically
+ assures that the interpreters never get stuck.
+ This family of interpreters thus demonstrates again that it is
+ useful to abstract over higher-kinded types.</p>
+<p>Joint work with Jacques Carette and Chung-chieh Shan.</p></dd>
+<dt><strong>Version</strong></dt>
+<dd>The current version is 1.3, 2009.</dd>
+<dt><strong>References</strong></dt>
+<dd><a href="JFP.pdf">JFP.pdf</a> [217K]
+<br>
+Journal of Functional Programming 19(5):509-543, 2009<p><a href="course/index.html#lecture">Lecture notes from the course on typed tagless-final embeddings of domain-specific languages</a>
+<br>
+with mode details and more examples</p>
+<p><a href="README.txt">README.txt</a> [3K]
+<br>
+Commented code accompanying the paper, with the complete implementations of all interpreters.</p>
+<p>Chung-chieh Shan. Slides of the talk at APLAS, November 30, 2007. Singapore.
+<br>
+<a href="http://www.cs.rutgers.edu/~ccshan/tagless/talk.pdf">&lt; http://www.cs.rutgers.edu/~ccshan/tagless/talk.pdf &gt;</a></p>
+<p>Chung-chieh Shan: Embedding languages. Talk at Rutgers computer science department, December 13, 2007.
+<br>
+<a href="http://www.cs.rutgers.edu/~ccshan/quote/language.pdf">&lt; http://www.cs.rutgers.edu/~ccshan/quote/language.pdf &gt;</a></p>
+<p>Chung-chieh Shan: Translations. Blog post, August 17, 2007.
+<br>
+<a href="http://conway.rutgers.edu/~ccshan/wiki/blog/posts/Translations/">&lt; http://conway.rutgers.edu/~ccshan/wiki/blog/posts/Translations/ &gt;</a>
+<br>
+The article elucidates typed tagless interpretations as a way to relate form with meaning in natural languages. An abstract syntax expression may be interpreted either to yield an utterance or text, or to yield a semantic denotation. Types (in linguistics, categories) ensure the well-formedness of forms, expressions, and denotations. More precisely, typed tagless interpretation turns out to closely related to <em>abstract categorial grammars</em> (ACGs).</p></dd></dl>
+<p><a name="typed-compilation">&nbsp;</a></p><h2>Typed Compilation</h2>
+<dl><dd>By `typed compilation' we mean a transformation from an untyped to typed tagless representations. The untyped form is an AST (represented as a regular data type), which is usually the result of parsing a file or similar plain data. The typed tagless representation takes the form of either <em>generalized</em> algebraic data types GADT (the initial approach), or alternatively, type-constructor--polymorphic terms (the final approach). Either type representation can be interpreted in various ways (e.g., evaluated, CPS-transformed, partially evaluated, etc). All these interpretations are assuredly type-preserving and <em>patently</em> free of any `type errors' such as failure to pattern-match type tags or reference to an unbound variable. The freedom from pattern-match failures is syntactically apparent: e.g., the final representation just has no type tags at all, corresponding to closed code by construction. Therefore, the typed representations are handled internally as if no types existed: indeed, after typechecking all the types can be erased.<p>Typed compilation is a generalization of typechecking (the latter merely verifies if an expression is well-typed). Typed compilation is relied upon when dynamically loading (typed) code or implementing typed DSL. Typed compilation is inherently a partial operation (a source term may be ill-typed) and it has to deal with (run-time) type representations. The result of compilation, however, has no type-related partiality and needs no type information. `Typecheck once, assuredly interpret many times' is our main goal. It is achievable, albeit not simply. We follow the seminal work of Baars and Swierstra on Typing Dynamic Typing.</p>
+<p>Conceptually, the typed compiler is a function of the signature <code>typecheck :: Expr -&gt; Term t</code> , whose three concrete examples are given below. One must distinguish this function from a similar, also partial function <code>my_read :: Expr -&gt; Term t</code> . Although the latter has the same signature, the intent is different. When the user writes <code>my_read exp</code> , the user is supposed to <em>specify</em> the type of the desired result. Just as when we write <code>read 1</code> in Haskell, we are supposed to specify the type of the expected value: Int, Integer, etc. The function <code>typecheck</code> has a different intent: it <em>computes</em> the result type as well as derives the term of that type, the compilation result. The function indeed acts as a compiler of a typed language. The computed result type <code>Term t</code> is a function of the structure of the untyped source expression -- that is, on the face of it, a dependent type. Our solutions are expressed in the language (Haskell) that is not normally thought of as a dependently typed language.</p></dd>
+<dt><strong>References</strong></dt>
+<dd><p>Arthur I. Baars and S. Doaitse Swierstra: Typing Dynamic Typing. ICFP 2002.</p>
+<p><a href="#tc-GADT-tc">Metatypechecking: Staged Typed Compilation into GADT using typeclasses</a></p>
+<p><a href="#tc-final">Typed compilation to HOAS as emulation of staging</a></p>
+<p><a href="#tc-GADT">Typed compilation via GADTs</a></p>
+<p><a href="#in-fin">Relating Final and Initial typed tagless representations</a></p></dd></dl>
+<p><a name="call-by-any">&nbsp;</a></p><h2>Parameterizing expressions by the evaluation order</h2>
+<dl><dd>We demonstrate a tagless final interpreter for call-by-name, call-by-value and call-by-need simply-typed lambda-calculus with integers and constants. We write a lambda-term once, which GHC(i) immediately type checks. Once the term is accepted, it can be evaluated several times using different interpreters with different evaluation orders. All the interpreters are written in the tagless final framework and so are efficient and assuredly type-preserving. We obtain a higher-order embedded domain-specific language with the selectable evaluation order.<p>The interpreters implementing different evaluation orders are very much alike. In fact, they are written so to share most of the code save for the interpretation of <code>lam</code> . The semantics of abstraction is indeed what sets the three evaluation orders apart.</p>
+<p>We define the DSL as a type class <code>EDSL</code> . The type class declaration defines the syntax and its instances define the semantics of the language. Our DSL is typed; the DSL types are built using the constant <code>IntT</code> and the binary infix type constructor <code>:-&gt;</code> .</p>
+<pre>     data IntT
+     data a :-&gt; b
+     infixr 5 :-&gt;
+</pre>We could have used Haskell's Int and arrow types as DSL types. For clarity, we chose to distinguish the object language types from the meta-language (Haskell) types.<pre>     class EDSL exp where
+          lam :: (exp a -&gt; exp b) -&gt; exp (a :-&gt; b)
+          app :: exp (a :-&gt; b) -&gt; exp a -&gt; exp b
+
+          int :: Int -&gt; exp IntT             -- Integer literal
+          add :: exp IntT -&gt; exp IntT -&gt; exp IntT
+          sub :: exp IntT -&gt; exp IntT -&gt; exp IntT
+</pre>After introducing a convenient `macro' <code>let_</code> (which could have been called `bind') we write a sample object language term as follows:<pre>     let_ :: EDSL exp =&gt; exp a -&gt; (exp a -&gt; exp b) -&gt; exp b
+     let_ x y = (lam y) `app` x
+
+     t2 :: EDSL exp =&gt; exp IntT
+     t2 = (lam $ \z -&gt; lam $ \x -&gt; let_ (x `add` x)
+                                     $ \y -&gt; y `add` y)
+          `app` (int 100 `sub` int 10)
+          `app` (int 5 `add` int 5)
+</pre>
+<p>We embed the DSL into Haskell. We define the interpretation of DSL types into Haskell types as the following type function.</p>
+<pre>     type family Sem (m :: * -&gt; *) a :: *
+     type instance Sem m IntT      = Int
+     type instance Sem m (a :-&gt; b) = m (Sem m a) -&gt; m (Sem m b)
+</pre>The interpretation is parameterized by the type <code>m</code> , which must be a Monad. The use of type families is not essential, merely convenient. In fact, we can easily re-write the whole code in Haskell98, see below. We interpret EDSL expressions of the type <code>a</code> as Haskell values of the type <code>S l m a</code>:<pre>     newtype S l m a = S { unS :: m (Sem m a) }
+</pre>where <code>l</code> is the label for the evaluation order, one of <code>Name</code> , <code>Value</code> , or <code>Lazy</code> .<p>Here is the call-by-name interpreter (with <code>sub</code> elided). One of the reasons to parameterize the interpreter over <code>MonadIO</code> is to print out the evaluation trace, so that we can see the difference among the three evaluation strategies in the number of performed additions and subtractions.</p>
+<pre>     data Name
+     instance MonadIO m =&gt; EDSL (S Name m) where
+       int = S . return
+       add x y = S $ do a &lt;- unS x
+                        b &lt;- unS y
+                        liftIO $ putStrLn &quot;Adding&quot;
+                        return (a + b)
+       lam f   = S . return $ (unS . f . S)
+       app x y = S $ unS x &gt;&gt;= ($ (unS y))
+</pre>We evaluate the sample term under call-by-name<pre>     runName :: S Name m a -&gt; m (Sem m a)
+     runName x = unS x
+
+     t2SN = runName t2 &gt;&gt;= print
+</pre>obtaining the result 40 and observing from the trace that subtraction was not performed (because the value of <code>int 100 `sub` int 10</code> was not needed to compute the result of <code>t2</code>). On the other hand, the sub-expression <code>int 5 `add` int 5</code> was evaluated four times.<p>The call-by-value evaluator differs from the call-by-name one only in the interpretation of the abstraction:</p>
+<pre>     lam f   = S . return $ (\x -&gt; x &gt;&gt;= unS . f . S . return)
+</pre>The evaluation of the lambda abstraction body always starts by evaluating the argument, whether the result will be needed or not. That is literally the definition of call-by-value. The very same sample term can be interpreted differently:<pre>     runValue :: S Value m a -&gt; m (Sem m a)
+     runValue x = unS x
+     t2SV = runValue t2 &gt;&gt;= print
+</pre>giving in the end the same result 40. Although the result of the subtraction was not needed, the trace shows it performed. On the other hand, the argument sub-expression <code>int 5 `add` int 5</code> was evaluated only once. In call-by-value, arguments of evaluated applications are evaluated exactly once.<p>The call-by-need evaluator differs from the others again in one line, the interpretation of abstractions:</p>
+<pre>     lam f           = S . return $ (\x -&gt; share x &gt;&gt;= unS . f . S)
+</pre>The evaluation of the body of the abstraction always starts by lazy sharing the argument expression. Again, this is the definition of call-by-need. We run the very same term <code>t2</code> with the new evaluator, obtaining the same result 40 and observing from the execution trace that subtraction was not evaluated (because it was not needed) but the needed argument expression <code>int 5 `add` int 5</code> was evaluated once. In call by need, arguments of evaluated applications are evaluated <em>at most</em> once.</dd>
+<dt><strong>Version</strong></dt>
+<dd>The current version is 1.1, Oct 8, 2009.</dd>
+<dt><strong>References</strong></dt>
+<dd><a href="CB.hs">CB.hs</a> [7K]
+<br>
+The complete code and the evaluation tests and traces
+<br>
+The code was originally posted as <cite>CBN, CBV, Lazy in the same final tagless framework</cite> on the Haskell-Cafe mailing list on Thu, 8 Oct 2009 00:54:14 -0700 (PDT).<p><a href="CB98.hs">CB98.hs</a> [7K]
+<br>
+The same code in Haskell98, proving that the tagless final approach indeed requires fewer fancy type system features. The fancy features like the type families, used in CB.hs, add convenience and gloss. One can do without them however. The code can easily be re-written in OCaml, which has no typeclasses, type families and other bleeding-edge features.</p>
+<p><a href="../Scheme/macros.html#syntax-param">Parameterized syntax: interpreters without run-time interpretive overhead</a>
+<br>
+Evaluating the same Scheme source language expression using call-by-value, call-by-reference, and call-by-name evaluation strategies.</p></dd></dl>
+<p><a name="tc-final">&nbsp;</a></p><h2>Typed compilation to HOAS as emulation of staging</h2>
+<dl><dd>We present the typed compilation from an untyped <em>higher-order</em> language to the typed tagless final representation. The latter can be evaluated by all the interpreters in the Tagless Final paper. The typechecking happens only once, regardless of the number of interpretations of the term. The typed compiler has the signature<pre>     typecheck :: forall repr. Symantics repr =&gt;
+                  UExp -&gt; Gamma -&gt; Either String (DynTerm repr)
+     data DynTerm repr = forall a. (Show a, Typeable a) =&gt; DynTerm (repr a)
+</pre>Given the untyped term and the type environment, <code>typecheck</code> returns either a type error message, or the compiled term and the representation of its computed type. The compilation result can be interpreted by any Symantics interpreter assuredly without any pattern-match errors.<p>The biggest problem is compiling higher-order untyped terms such as <code>Lam &quot;x&quot; (UAdd (UVar &quot;x&quot;) (UInt 1))</code> into typed <em>higher-order abstract syntax</em> , e.g., <code>lam (\x -&gt; add x (int 1))</code> . The naive approach such as</p>
+<pre>     DynTerm (lam (\x -&gt; unDynTerm $ typecheck (UAdd (UVar &quot;x&quot;) (UInt 1)) [(&quot;x&quot;,x)]))
+</pre>fails in our goal of compiling only once: here, <code>typecheck</code> is invoked every time the compiled function is applied. Since the typechecking is partial, we can no longer assure that the result of a successful compilation can be interpreted without any type-related errors.<p>Nevertheless, we have accomplished our task, without relying on any built-in staging, GADTs or type classes with functional dependencies. Of all the extensions to Haskell98, we only use existentials and Typeable. The code shows uncanny similarities with staging. Furthermore, it seems we <em>need</em> staging or its emulation for the typed compilation into higher-order abstract syntax. Both type-checking and staging have to manipulate open code, whose free variables are hypotheses, or type abstractions.</p>
+<p>Another remarkable part of the tagless final compilation is its close relationship with proofs in logic. Typechecking is truly building a proof, using hypothetical reasoning. Moreover, our typed compiler must be explicit with weakening (to extend the typing environment) and the application of structural rules (which take the form of cut-rules). The result of compiling the body of the function happens do be the same as that of compiling the whole function, which is the statement of the Deduction Theorem.</p>
+<p>Finally, our <code>DynTerm</code>s are essentially <code>Data.Dynamic</code> , only with more operations and implemented in pure Haskell.</p></dd>
+<dt><strong>Version</strong></dt>
+<dd>The current version is 1.2, Nov 21, 2007.</dd>
+<dt><strong>References</strong></dt>
+<dd><p><a href="course/index.html#type-checking">A new, much simpler version of the code, using de Bruijn indices</a></p>
+<p><a href="IncopeTypecheck.hs">IncopeTypecheck.hs</a> [18K]
+<br>
+Extensively commented Haskell code. The title comments explain the problem of HOAS typechecking, the solution, and its connection to staging. The code requires Incope.hs, see below.</p>
+<p><a href="Incope.hs">Incope.hs</a> [21K]
+<br>
+Tagless final interpreters. The archive includes Incope.hs, which defines our source language and several its interpreters.</p>
+<p><a href="../meta-programming/calculi.html#metafx">Closing the Stage: from staged code to typed closures</a>
+<br>
+The translation of the staged code to an unstaged language, too, requires manipulation of `open' code and the explicit weakening of the binding environment. The weakening is called coercion in the paper `Closing the Stage'.</p></dd></dl>
+<p><a name="tagless-Eval">&nbsp;</a></p><h2>Tagless (staged) interpreter typeclass for typed languages</h2>
+<dl><dd>We demonstrate a <em>tagless</em> (definitional) interpreter for a typed language implemented in a typed meta-language: Haskell with multi-parameter typeclasses and functional dependencies. The interpreter uses no universal type, no type tags, no pattern-matching. It is, in fact, total -- <em>syntactically</em> . The interpreter supports heterogeneous binding environment and the (functional) dependence of the type of the result on the structure of the source term. The interpreter is in fact a type class:<pre>     class Eval gamma exp result | gamma exp -&gt; result where
+       eval :: exp -&gt; gamma -&gt; result
+</pre>
+<p>Our code has been greatly inspired by the ICFP 2002 paper by Pasalic, Taha, and Sheard on staged tagless interpreters. The paper gives the most lucid explanation of the tagging problem in typed interpretation. Although the paper develops a dependently typed language Meta-D for writing typed tagless interpreters, the paper itself gives hints that dependent types are not really necessary. The key phrase was about indexing types by singleton <em>types</em> rather than by terms. The former is easily implementable in Haskell as it is. The introduction section gave the  other hint: the apparent problem with the <code>eval</code> function is that it should yield an <code>Int</code> when evaluating the literal constant expression <code>B 1</code> and yield a function when evaluating the term <code>L &quot;x&quot; (Var &quot;x&quot;)</code> . Indeed no ordinary function can return values of different types. But an overloaded function can, e.g., Haskell's <em>read</em> .</p>
+<p>With the help of Template Haskell, we stage our tagless code to remove its interpretative overhead. Because expressions in Template Haskell are untyped, we add a newtype wrapper to maintain their types. Our staged interpreter deals exclusively with these typed code expressions, to be faithful to the Pasalic et al. paper. Template Haskell can print code values, so we can see the staged result: the `compiled' code. In particular, here is the running example of the paper and the result of its evaluation with our staged interpreter:</p>
+<pre>     stest4 = show_tcode $ seval (L (TArr TInt TInt) (V Z)) HNil
+        *Staged&gt; stest4
+        \x_0 -&gt; x_0
+</pre>There are indeed no tags. Here is another test:<pre>     stest3 = show_tcode $ seval (A (L TInt (V Z)) (B 2)) HNil
+        *Staged&gt; stest3
+        (\x_0 -&gt; x_0) 2#
+</pre>If we change <code>TInt</code> above to <code>(TArr TInt TInt)</code> , we get a type error <em>before</em> running <code>stest3</code>: The typing is done at the meta-level.<p>The present code was the first attempt to define tagless interpreters in a language without (overt) dependent types. This work has continued in cooperation with Jacques Carette and Chung-chieh Shan. We showed that writing typed interpreters becomes significantly simpler if we change the building blocks of object language terms, from data constructors to constructor functions.</p></dd>
+<dt><strong>Version</strong></dt>
+<dd>The current version is 1.1, Aug 17, 2006.</dd>
+<dt><strong>References</strong></dt>
+<dd>Emir Pasalic, Walid Taha, Tim Sheard: Tagless Staged Interpreters for Typed Languages. ICFP 2002.
+<br>
+<a href="http://citeseer.ist.psu.edu/542022.html">&lt; http://citeseer.ist.psu.edu/542022.html &gt;</a><p><a href="Interp.hs">Interp.hs</a> [3K]
+<br>
+The tagless typed interpreter for the the typed language of the above paper, viz. simply-typed lambda-calculus with de Bruijn indices. The interpreter is deliberately patterned after the one in the paper, including the type-level function TypEval. The code almost literally implements the Meta-D interpreter from Fig. 3 of the paper and the typing rules from Fig. 1 -- without any dependent types.</p>
+<p><a href="Staged.hs">Staged.hs</a> [3K]
+<br>
+The staged tagless typed interpreter.</p>
+<p><a href="../Haskell/types.html#Prepose">Implicit configurations -- or, type classes reflect the values of types</a> . Haskell Workshop 2004. Joint work with Chung-chieh Shan.
+<br>
+The paper demonstrates how easy it is to introduce type families indexed by singleton types in Haskell as it was in 2003: Haskell98 extended with multi-parameter type classes with functional dependencies.</p></dd></dl>
+<p><a name="tc-GADT-tc">&nbsp;</a></p><h2>Metatypechecking: Staged Typed Compilation into GADT using typeclasses</h2>
+<dl><dd>We demonstrate a typed compiler, the function whose type is literally <code>Expr -&gt; Term t</code> . Here <code>Expr</code> is an ordinary algebraic data type of untyped source terms (the first-order language described in Peyton-Jones et al, ICFP 2006), and <code>Term t</code> is a GADT, the typed representation.<pre>     data Expr = ELit Int | EInc Expr | EIsZ Expr | ...
+     data Term t where
+        Lit  :: Int -&gt; Term Int
+        Inc  :: Term Int -&gt; Term Int
+        IsZ  :: Term Int -&gt; Term Bool ...
+</pre>The result <em>type</em> <code>t</code> is a function of the <em>value</em> of <code>Expr</code> . Thus we demonstrate the Haskell solution of the truly <em>dependent-type problem.</em><p>Although the result of the typed compilation is a GADT, the compiler itself uses neither GADTs nor representation types. The compiler is made of two parts. The first is the conversion from <code>Expr</code> to `lifted' terms:</p>
+<pre>     	 newtype FLit   = FLit Int
+     	 newtype FInc e = FInc e
+     	 newtype FIsZ e = FIsZ e
+</pre>implemented with the help of Template Haskell:<pre>     type F = Q TH.Exp
+     parse :: Expr -&gt; F
+     parse (ELit x) = [e| FLit $(litE . integerL . fromIntegral $ x) | ]
+     parse (EInc x) = [e| FInc $(parse x) | ]
+     parse (EIsZ x) = [e| FIsZ $(parse x) | ]
+</pre>The only inconvenience of using the Template Haskell is the necessity of splitting the whole code into two modules.<p>The main part is the typechecker class, which computes both the type of the result <code>t</code> and the corresponding value of the type <code>Term t</code> , the compilation result. The typechecking rules are stated as instances of the type class:</p>
+<pre>     class TypeCheck e t | e -&gt; t where
+       typecheck :: e -&gt; Term t
+
+     instance TypeCheck FLit Int where
+       typecheck (FLit x) = Lit x
+
+     instance TypeCheck e Int =&gt; TypeCheck (FInc e) Int where
+       typecheck (FInc e) = Inc (typecheck e)
+
+     instance TypeCheck e Int =&gt; TypeCheck (FIsZ e) Bool where
+       typecheck (FIsZ e) = IsZ (typecheck e)
+</pre>It is remarkable that the instances express the type checking rules as judgments, almost in the form they are commonly presented in papers. For example, the <code>IsZ</code> rule would be written in a paper as<pre>     	  |- e : int
+     	 ---------------
+     	  |- IsZ e : bool
+</pre>(We do not need the environment Gamma as our language is first order.)<p>Given two sample terms (as strings), we parse and typed-compile them:</p>
+<pre>     e1 = &quot;EIf (ELit 1) (ELit 2) (ELit 3)&quot;
+     e2 = &quot;(EIf (EIsZ (ELit 0))          &quot; ++
+          &quot;     (EInc (ELit 1))          &quot; ++
+          &quot;     (EFst (EPair (ELit 42) (ELit 43))))&quot;
+     t1' = $(parse . read $ e1)
+     t2' = $(parse . read $ e2)
+
+     -- tt1 = typecheck t1' -- gives a type error
+     tt2 = typecheck t2'
+       *G&gt; :t tt2
+       tt2 :: Term Int
+</pre>Obviously, the term <code>e1</code> is ill-typed: the test expression of a conditional should be a boolean rather than an integer. Therefore, the expression <code>typecheck t1</code> gives a type error: ``Couldn't match expected type Bool against inferred type Int''. In contrast, the typechecking (of the result of the parsing) of <code>e2</code> succeeds. The computed type of the compilation result is <code>Term Int</code> .<p>We stress that the typechecking of the embedded DSL is carried out by the <em>Haskell typechecker!</em> It is the latter that applies the typing judgments of our DSL expressed as the instances of the class <code>TypeCheck</code> . We thus succeeded in embedding into Haskell not only DSL terms but also the DSL type system.</p></dd>
+<dt><strong>Version</strong></dt>
+<dd>The current version is 1.1, Nov 2006.</dd>
+<dt><strong>References</strong></dt>
+<dd><p><a href="TypeCheck.hs">TypeCheck.hs</a> [3K]
+<br>
+<a href="TermLift.hs">TermLift.hs</a> [2K]
+<br>
+The complete implementation. The code was originally posted as <cite>An example of dependent types [was: Simple GADT parser for the eval example]</cite> on the Haskell-Cafe mailing list on Wed,  1 Nov 2006 00:30:56 -0800 (PST).</p></dd></dl>
+<p><a name="tc-GADT">&nbsp;</a></p><h2>Typed compilation via GADTs</h2>
+<dl><dd>We describe the typed compiler into a GADT-based typed representation. The compiler itself is implemented via GADT. It has the signature<pre>     	  typecheck :: Gamma -&gt; Exp -&gt; Either String TypedTerm
+     	  data TypedTerm = forall t. TypedTerm (Typ t) (Term t)
+</pre>The compiler takes the type environment and the untyped term, the value of the ordinary algebraic data type Exp, and returns either the type error message, or the compiled term and the representation of its computed type. Both <code>Typ t</code> and <code>Term t</code> are GADTs. Although to Haskell <code>TypedTerm</code> is just as `untyped' as <code>Exp</code> , the latter is `deeply' untyped whereas the former is only superficially. The former value is built out of typed components, and the type is erased only at the end. That fact guarantees that an evaluator of <code>Term t</code> , e.g., <code>eval :: Term t -&gt; t</code> never gets stuck. Combining the evaluator with the typed compiler and the show function gives the complete DSL interpreter <code>teval :: Exp  -&gt; String</code><pre>     te3 = EApp (EApp (EPrim &quot;+&quot;) (EApp (EPrim &quot;inc&quot;) (EDouble 10.0)))
+                (EApp (EPrim &quot;inc&quot;) (EDouble 20.0))
+     te4 = EApp (EPrim &quot;rev&quot;) te3
+
+        *TypecheckedDSL&gt; teval te3
+        &quot;type Double, value 32.0&quot;
+
+        *TypecheckedDSL&gt; teval te4
+        &quot;Type error: incompatible type of the application: (String-&gt;String) and Double&quot;
+</pre>
+<p>Upon success, the compiler returns a typed term wrapped in an existential envelope. Although we can evaluate that term, the result is not truly satisfactory because the existential type is not `real'. We cannot write</p>
+<pre>     	  case (typecheck te3) of Right (TypedTerm t e) -&gt; sin (eval e)
+</pre>although we know that <code>e</code> has the type <code>Term Double</code> and so applying the function sin to the result of <code>eval e</code> is well-typed. To the Haskell typechecker however, the type of <code>eval e</code> is some abstract type <code>t</code> rather than <code>Double</code> . Fortunately, Template Haskell lets us convert from an existential to a concrete type. This is equivalent to implementing an embedded <em>compiler</em> for our DSL. Since <code>TypedTerm</code> has already been typechecked, we are guaranteed the absence of errors during Template-Haskell-based `code generation'. The compiler, of the signature <code>tevall :: Exp  -&gt; ExpQ</code> , can be used as follows<pre>     	  tte3 = $(tevall te3)
+     	    :t tte3
+     	    tte3 :: Term Double
+     	  ev_tte3 = eval tte3
+     	    -- 32.0
+     	  testr = sin (eval tte3)
+     	    -- 0.5514266812416906
+</pre>
+<p>The key part of the implementation is the Equality GADT and checking if two DSL types are the same, and if so, computing the proof (the witness).</p>
+<pre>     	  data EQ a b where Refl :: EQ a a
+     	  eqt :: Typ a -&gt; Typ b -&gt; Maybe (EQ a b)
+</pre>
+<p>The Template Haskell compiler also relies of the function <code>lift'self :: Term a -&gt; ExpQ</code> satisfying the equation <code>$(lift'self term) == term</code> . It takes only four lines of code to define this function.</p></dd>
+<dt><strong>Version</strong></dt>
+<dd>The current version is 1.2, October 2007.</dd>
+<dt><strong>References</strong></dt>
+<dd><p><a href="TypecheckedDSL.hs">TypecheckedDSL.hs</a> [5K]
+<br>
+The complete implementation of a typed DSL with the typed evaluator and the typed compiler from untyped terms to GADT. The code was originally posted as <cite>Typechecker to GADT: the full implementation of a typed DSL</cite> on the Haskell-Cafe mailing list on Thu Oct 4 02:02:32 EDT 2007.</p>
+<p><a href="TypecheckedDSLTH.hs">TypecheckedDSLTH.hs</a> [7K]
+<br>
+<a href="TypedTermLiftTest.hs">TypedTermLiftTest.hs</a> [&lt;1K]
+<br>
+The complete code for the compiler of the typed DSL, using Template Haskell to `compile' GADT to `machine code'. The code was originally posted as <cite>Typed DSL compiler, or converting from an existential to a concrete type</cite> on the Haskell-Cafe mailing list on Sat Oct 6 03:55:36 EDT 2007.</p></dd></dl>
+<p><a name="in-fin">&nbsp;</a></p><h2>Relating Final and Initial typed tagless representations</h2>
+<dl><dd>We have seen two approaches to typed tagless representation of an embedded DSL. Either representation can be interpreted with no errors due to type-tag mismatch, or due to a reference to an unbound variable. The absence of both sorts of errors is statically assured and patent to the metalanguage compiler.<p>In the initial approach, typed terms are represented by GADTs. The absence of type-tag mismatch errors is the central property of GADT. The absence of unbound variable reference errors is assured either by higher-order abstract syntax (Xi et al., POPL 2003) or de Bruijn indices and dependent types (Pasalic et al., ICFP 2002). This page has described the final tagless approach. Type-tag mismatch errors are patently absent because there are simply no type tags and hence no possibility of type errors during interpretation. The absence of the second sort of errors can likewise be assured by higher-order abstract syntax (used here) or de Bruijn indices.</p>
+<p>We demonstrate that the final and initial typed tagless representations are related by bijection. We use the higher-order language of the Tagless Final paper (APLAS 2007), which is the superset of the language introduced in Xi et al (POPL 2003). In the latter paper, the tagless interpretation of the language was the motivation for GADT. In a bit abbreviated form, the final and the initial representations of our DSL are defined as follows:</p>
+<pre>     class Symantics repr where
+         int :: Int -&gt; repr Int
+         lam :: (repr a -&gt; repr b) -&gt; repr (a-&gt;b)
+         app :: repr (a-&gt;b) -&gt; repr a -&gt; repr b
+         fix :: (repr a -&gt; repr a) -&gt; repr a
+         add :: repr Int -&gt; repr Int -&gt; repr Int
+
+     data IR h t where
+         Var  :: h t -&gt; IR h t
+         INT  :: Int  -&gt; IR h Int
+         Lam  :: (IR h t1 -&gt; IR h t2) -&gt; IR h (t1-&gt;t2)
+         App  :: IR h (t1-&gt;t2) -&gt; IR h t1  -&gt; IR h t2
+         Fix  :: (IR h t -&gt; IR h t) -&gt; IR h t
+         Add  :: IR h Int -&gt; IR h Int -&gt; IR h Int
+</pre>The data constructor <code>Var</code> of the initial representation corresponds to <code>HOASLift</code> of Xi et al. The initial representation is parameterized by the type of the hypothetical environment <code>h</code>: <code>h t</code> is the type of an environment `cell' holding a value of the type <code>t</code> .<p>The relation between the two representations is established as follows:</p>
+<pre>     instance Symantics (IR h) where
+         int  = INT
+         lam  = Lam
+         app  = App
+         fix  = Fix
+         add  = Add
+
+     itf :: Symantics repr =&gt; IR repr t -&gt; repr t
+     itf (Var v)     = v
+     itf (INT n)     = int n
+     itf (Lam b)     = lam(\x -&gt; itf (b (Var x)))
+     itf (App e1 e2) = app (itf e1) (itf e2)
+     itf (Fix b)     = fix(\x -&gt; itf (b (Var x)))
+     itf (Add e1 e2) = add (itf e1) (itf e2)
+</pre>
+<p>We note the properties of the mappings from the final to the initial and vice versa: both mappings are total and a composition of one mapping with the other preserves interpretations. The code below gives concrete examples of that preservation.  The totality is especially easy to see for the mapping from the final to the initial, since the mapping looks like identity. The mapping is one of many possible interpretations of a term in the final tagless form.</p></dd>
+<dt><strong>Version</strong></dt>
+<dd>The current version is 1.1, Jan 1, 2008.</dd>
+<dt><strong>References</strong></dt>
+<dd><a href="InFin.hs">InFin.hs</a> [8K]
+<br>
+Haskell code with the complete definitions of both representations, several sample interpreters, complete bijections and their compositions. The code includes several concrete examples.<p><a href="../typed-formatting/FPrintScan.html#DSL-In">Formatted IO as an embedded DSL: the initial view</a>
+<br>
+<a href="../typed-formatting/FPrintScan.html#DSL-FIn">Formatted IO as an embedded DSL: the final view</a>
+<br>
+An example of initial and final embeddings of a DSL of formatting patterns</p></dd></dl>
+<br>
+<div><hr></div><h3>Last updated February 5, 2013</h3>
+This site's top page is <a href="http://kinokkory.github.io/okmij/"><strong>http://kinokkory.github.io/okmij/</strong></a><div><p><cite>oleg-at-pobox.com or oleg-at-okmij.org</cite>
+<br>
+Your comments, problem reports, questions are very welcome!</p></div>
+<p><font size="-2">Converted from HSXML by HSXML-&gt;HTML</font></p></body></html>
