@@ -1,0 +1,383 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/html4/loose.dtd">
+<html lang="ja">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta http-equiv="Content-Style-Type" content="text/css">
+	<meta name="author" content="Kinokkory">
+	<meta name="description" content="狭義の正の代数的データ型とあるクラスの多相 System F 項との間のベームベラルドゥッチ同型を説明し、単純な例で解説する">
+	<meta name="date" content="May 18, 2014">
+	<link rel="contents"  href="../">
+	<style type="text/css">
+	<!--
+	pre {margin-left:2em;}
+	-->
+	</style>
+	<title>チャーチ符号化の先へ：代数的データ型と多相ラムダ項のベームベラルドゥッチ同型</title>
+</head>
+<body>
+	<div align="center"><a href="../">目次</a><hr></div>
+	<div align="center"><h1>チャーチ符号化の先へ：代数的データ型と多相ラムダ項のベームベラルドゥッチ同型</h1></div>
+	<br>
+	<ul>
+		<li><a href="#Boehm-Berarducci">はじめに</a></li>
+		<li><a href="#baseline">基礎：代数的データ型に対する演算</a></li>
+		<li><a href="#encoded">符号化された代数的データ型に対する演算</a></li>
+		<li><a href="#algebra">符号化を始代数として見る</a></li>
+		<li><a href="#cdr-fstream">関数的ストリームで <code>tail</code> を取る方法</a></li>
+	</ul>
+	<hr>
+
+	<br>
+	<h2><a name="Boehm-Berarducci">はじめに</a></h2>
+	<dl>
+		<dd>
+			<p>
+				1985年、コラド＝ベーム (Corrado B&ouml;hm) とアレッサンドロ＝ベラルドゥッチ (Alessandro Berarducci) が、狭義の正 (strictly positive) の代数的データ型を多相ラムダ計算 (System F) において符号化する方法を発表した。
+				彼らはデータ型に対する演算 ― 構成 (construction) と特にパターンマッチ ― を<strong>体系的に</strong>自動的に、適用と抽象［関数適用とラムダ抽象にくわえて、全称量化型についての適用と抽象］のみを持つ対象言語へと翻訳する方法を示した。
+				彼らはこの符号化が一対一対応であることを証明した。
+				この方法を使えば、全ての狭義の正の代数的データ型を無駄なく符号化できるのだ。
+				たとえば、<code>forall a. ((a-&gt;a)-&gt;a-&gt;a)</code> 型の閉標準項全体からなる集合は、まさに符号化された自然数からなる集合である。
+				多相型は「データ型を表現するための表記体系」となる。
+				さらに、この符号化はデータ型に対する演算と交換可能である ― 同型なのだ。
+				現代的に言えば、彼らは System F 項を台 (carrier) として狭義の正の関手の始代数を構成する方法を示した。
+			</p>
+			<p>
+				ベームベラルドゥッチ符号化 (B&ouml;hm-Berarducci encoding) はチャーチ符号化 (Church encoding) としばしば混同される。
+				そもそも、チャーチ符号化は<strong>型無し</strong>ラムダ項のデータ型を代表するものであり、ピタッとしていない。
+				型が無ければ、あるデータ型を符号化するラムダ項と何のデータ型も表さないラムダ項とを隔てることは出来ない。
+				二つのアプローチの間の主な違いは理解しがたい。
+				早い話が、チャーチ符号化は導入しか記述しないが、ベームベラルドゥッチの方は、符号化されたデータ型に対する除去あるいはパターンマッチも定義するのだ。
+				たとえば、リスト <code>[1,2]</code> はどちらの符号化でも <code>\f x -&gt; f 1 (f 2 x)</code> と表現される。
+				<code>head</code> 関数を書くのは簡単である（このラムダ項に適用すると <code>1</code> を返す関数である）。
+				しかし、<code>tail</code> 関数を書くのはもっと難しい（このラムダ項に適用すると <code>[2]</code> の符号化である <code>\f x -&gt; f 2 x</code> を返す関数である）。
+				読者はここでいったん読むのをやめて <code>tail</code> を書きたいを思うかもしれない。
+				答えは、チャーチ数の前者関数を一般化したものであるが、その場しのぎに見える。
+				これを様々な木構造のエンコーディングに拡張して自動的につくりだす方法は自明ではない。
+				ベームとベラルドゥッチは初めて「コツ」、つまりどんな代数的データ型を符号化したものについてもパターンマッチ関数を書く<strong>体系的な</strong>方法を示したのだ。
+			</p>
+			<p>
+				ベームとベラルドゥッチの論文は素晴らしい洞察に満ちている。
+				しかし悲しいかな、表現が一般性を持つので、論文を理解するのは非常に難しいのだ。
+				禅問答のように、結果をすでに知っているのに理解できないのだ。
+				私がパターンマッチの翻訳法を理解したのは、すでに独自にその「コツ」を再発見していて、それを論文で特に探していたからだ。
+				この記事は、単純な例で論文の主な着想を説明し解説しようとしている。
+			</p>
+			<p>
+				思い出してほしい。
+				ベームベラルドゥッチ符号化は代数的データ型とそれらに対する演算を、抽象と適用と基本的な型定数しか持たない System F へと翻訳するのである。
+				この符号化は、今「狭義の正の」データ型 ― 構成子の引数側 (domain of constructors) に関数が現れない［型定数、直和型、直積型しかない］データ型 ― にしか適用されない（ベームとベラルドゥッチの論文の Remark 1.1 (d) を見よ）。
+				例えば、符号化は高階抽象構文のラムダ計算項を表現するデータ型には適用できないのだ。
+				この符号化は再帰的（正確には帰納的）データ型を再帰的でないが高階ではある System F 項として表現するのだ。
+				平たく言えば、この符号化は型レベルの原始再帰を項レベルの原始再帰と高々二階の任意ランク型 (higher-rank type) に置き換えるのである。
+				符号化は OCaml でも Haskell でも実装可能である。どちらも任意ランク型をサポートしているからだ。
+				これから見るように、この符号化は繰り返し復号化 (decoding) と再符号化を繰り返すせいで、性能に深刻な問題がある。
+			</p>
+		</dd>
+		<dt><strong>バージョン</strong></dt>
+		<dd>2012年4月版</dd>
+		<dt><strong>参考文献</strong></dt>
+		<dd>
+			Corrado Boehm and Alessandro Berarducci: Automatic Synthesis of Typed Lambda-Programs on Term Algebras
+			<br>
+			Theoretical Computer Science, 1985, v39, pp. 135--154.
+			<p>
+				Philip Wadler: Recursive types in polymorphic lambda calculus
+				<br>
+				この符号化の発端を問う Types mailing list におけるメッセージ1999/5/14 (金) 15:24:32 -0400 投稿
+				<br>
+				<a href="http://www.seas.upenn.edu/~sweirich/types/archive/1999-2003/msg00138.html">&lt; http://www.seas.upenn.edu/~sweirich/types/archive/1999-2003/msg00138.html &gt;</a>
+			</p>
+			<p>
+				<a href="#cdr-fstream">関数的ストリームで<code>tail</code>を取る方法</a>
+				<br>
+				余帰納データ型に対するベームベラルドゥッチ符号化の適用
+			</p>
+		</dd>
+	</dl>
+
+	<br>
+	<h2><a name="baseline">基礎：代数的データ型に対する演算</a></h2>
+	<dl>
+		<dd>
+			<p>
+				基礎、つまり、代数的データ型を定義しその値を構成・分解 (deconstruct)・変形する典型例から始めよう。
+				あとでベームベラルドゥッチ符号化を使って例を書き換える。
+				これまでずっと取り上げている例はタグレスファイナル講義からの <code>Exp</code> データ型である。
+				このデータ型は整数を足し引きできる些末な「ドメイン固有言語」の式を表している。
+			</p>
+			<pre>data Exp = Lit Int&#13;&#10;         | Neg Exp&#13;&#10;         | Add Exp Exp</pre>
+			<p>
+				サンプルの項を作ろう。
+			</p>
+			<pre>ti1 = Add (Lit 8) (Neg (Add (Lit 1) (Lit 2)))</pre>
+			<p>
+				<code>Exp</code> の消費関数 (consumer) のサンプルは <code>Exp</code> 型の値を文字列として示す。
+				この関数は構造再帰的で、<code>Exp</code> の引数を分解するのにパターンマッチに頼っている。
+				<code>ti1_view</code> の後のコメントでサンプルの項を見た結果が示されている。
+			</p>
+			<pre>view :: Exp -&gt; String&#13;&#10;view (Lit n) = show n&#13;&#10;view (Neg e) = &quot;(-&quot; ++ view e ++ &quot;)&quot;&#13;&#10;view (Add e1 e2) = &quot;(&quot; ++ view e1 ++ &quot; + &quot; ++ view e2 ++ &quot;)&quot;&#13;&#10;&#13;&#10;ti1_view = view ti1&#13;&#10;-- &quot;(8 + (-(1 + 2)))&quot;</pre>
+			<p>
+				項変換子のサンプルは引き算を押し下げて、項を「負の標準形」― リテラルだけが、そして一回だけ、負になりうる形 ― に変換する。
+				このコードは未だにパターンマッチを使っているが、構造再帰的ではない（最後から二番目の節を見よ）。
+			</p>
+			<pre>push_neg :: Exp -&gt; Exp&#13;&#10;push_neg e@(Lit _) = e&#13;&#10;push_neg e@(Neg (Lit _)) = e&#13;&#10;push_neg (Neg (Neg e)) = push_neg e&#13;&#10;push_neg (Neg (Add e1 e2)) = Add (push_neg (Neg e1)) (push_neg (Neg e2))&#13;&#10;push_neg (Add e1 e2) = Add (push_neg e1) (push_neg e2)</pre>
+			<p>
+				ここにいくつかサンプルの変換とその結果（コメントに示されている）がある。
+			</p>
+			<pre>ti1_norm = push_neg ti1&#13;&#10;i1_norm_view = view ti1_norm&#13;&#10;-- &quot;(8 + ((-1) + (-2)))&quot;&#13;&#10;&#13;&#10;-- さらに符号の反転を施す&#13;&#10;ti1n_norm_view = view (push_neg (Neg ti1))&#13;&#10;- &quot;((-8) + (1 + 2))&quot;</pre>
+		</dd>
+		<dt><strong>バージョン</strong></dt>
+		<dd>2012年4月版</dd>
+		<dt><strong>参考文献</strong></dt>
+		<dd>
+			<a href="BB_ADT.hs">BB_ADT.hs</a> [2K]
+			<br>
+			完全な Haskell コードの例
+		</dd>
+	</dl>
+
+	<br>
+	<h2><a name="encoded">符号化された代数的データ型に対する演算</a></h2>
+	<dl>
+		<dd>
+			<p>
+				代数的データ型の基礎の例を、ベームベラルドゥッチ符号化を使って、データ型をラムダ項として書き換えて表現する。
+				データ型<code>Exp</code>の符号化は次の二つのステップで定義される。
+				まず、<code>Exp</code> 代数 (algebra) の指標 (signature) を明らかにする ― 代数構築子の型である。
+				<strong>非再帰的な</strong> Haskell のレコードは指標をよく表している。
+			</p>
+			<pre>data ExpDict a = ExpDict {dlit :: Int -&gt; a, dneg :: a -&gt; a, dadd :: a -&gt; a -&gt; a}</pre>
+			<p>
+				ベームベラルドゥッチ符号化のある版は単にこのように表現できる。
+			</p>
+			<pre>type ExpBB1 = forall a. (ExpDict a -&gt; a)</pre>
+			<p>
+				ランク２型を使って型レベル再帰を手放せたけれども、データ型をまだ手放せていない。
+				結果は（項と型の）適用と抽象のみを持っていてほしい。
+				このために、レコードの引数をカリー化しよう。
+			</p>
+			<pre>newtype ExpBB = ExpBB {unExpBB :: forall a. ((Int -&gt; a) -&gt; (a -&gt; a) -&gt; (a -&gt; a -&gt; a) -&gt; a)}</pre>
+			<p>
+				<code>ExpBB</code> が <code>Exp</code> を符号化した型である。
+				<code>newtype</code> ラッパーのおかげで System F の型抽象と適用を書き表せる ― <code>ExpBB</code> 構成子の出現は型抽象と対応していて、<code>unExpBB</code> は型適用を表しているのだ。
+			</p>
+			<p>
+				データ型宣言は新しい型、データ構成子（導入）、分解子（除去）、再帰原理（畳み込み）を定義する。
+				同様に、ここで、符号化された <code>Exp</code> 型の値に対する型 <code>ExpBB</code> を導入した。
+				この型はただちに構成子、あるいは指標の型を教えてくれる。これらの構成子
+			</p>
+			<pre>lit :: Int -&gt; ExpBB&#13;&#10;lit x = ExpBB $ \dlit dneg dadd -&gt; dlit x&#13;&#10;&#13;&#10;neg :: ExpBB -&gt; ExpBB&#13;&#10;neg e = ExpBB $ \dlit dneg dadd -&gt; dneg (unExpBB e dlit dneg dadd)&#13;&#10;&#13;&#10;add :: ExpBB -&gt; ExpBB -&gt; ExpBB&#13;&#10;add e1 e2 = ExpBB $ \dlit dneg dadd -&gt;&#13;&#10;dadd (unExpBB e1 dlit dneg dadd) (unExpBB e2 dlit dneg dadd)</pre>
+			<p>
+				は <code>ExpBB</code> 型の値が <code>Exp</code> に対する畳み込みであることを明らかにしてくれる。
+				つまり、<code>exp :: Exp</code> を符号化すると、項 <code>\lit neg add -&gt; fold_Exp lit neg add exp :: ExpBB</code> になるのである。
+				ただし、<code>fold_Exp</code> は <code>Exp</code> 代数に結び付けられた帰納原理（畳み込み）である。
+			</p>
+			<p>
+				サンプルの項
+			</p>
+			<pre>tbb1 = add (lit 8) (neg (add (lit 1) (lit 2)))</pre>
+			<p>
+				は、構成子の大文字小文字を無視すると、サンプルの <code>Exp</code> の項 <code>ti1</code> と同じに見える。
+			</p>
+			<p>
+				すでに、符号化された値の <code>view</code> のような消費関数を書ける。
+			</p>
+			<pre>viewBB :: ExpBB -&gt; String&#13;&#10;viewBB e = unExpBB e dlit dneg dadd&#13;&#10;where&#13;&#10;dlit n = show n&#13;&#10;dneg e = &quot;(-&quot; ++ e ++ &quot;)&quot;&#13;&#10;dadd e1 e2 = &quot;(&quot; ++ e1 ++ &quot; + &quot; ++ e2 ++ &quot;)&quot;&#13;&#10;&#13;&#10;tbb1v = viewBB tbb1&#13;&#10;-- &quot;(8 + (-(1 + 2)))&quot;</pre>
+			<p>
+				関数 <code>view :: Exp -&gt; String</code> は構造再帰的だった。
+				つまり、<code>Exp</code> への畳み込みの一例であった。
+				<code>Exp</code> のベームベラルドゥッチ符号は畳み込みであるので、<code>viewBB</code> を作るには単に具体例を作るだけで良い。
+				<code>Exp</code> の <code>view</code> と違い、<code>viewBB</code> は再帰的でない。
+				<code>ExpBB</code> 型の値の入力自体によって走査が成り立っているのだ。
+				ベームとベラルドゥッチは <code>view</code> のような関数を走査的 (iterative) な関数と呼んだ（論文の 2.1 節を見よ）。
+				代数的データ型に対する走査的関数 <code>f</code> について、<code>f</code> の定義を、符号化されたデータ型への対応する関数の定義へと書き換える<strong>機械的手続き</strong>が得られる。詳しくは 5 節の「プログラム合成」を見よ。
+				<code>viewBB</code> のコードは <code>view</code> のコードの機械的書き換えに由来するのだ。
+			</p>
+			<p>
+				畳み込みでない、つまり構造再帰的でない <code>Exp</code> の関数を扱うにはどうすればいいのだろう？
+				どうしたら <code>ExpBB</code> 型の値への一般的な分解子を定義し、<code>ExpBB</code>に対するある種の「パターンマッチ」を使う演算を書けるだろう？
+				ベームとベラルドゥッチはこの問いにも答えられる。
+				しかし悲しいかな、この答えは独自に再発見して初めてわかるのだ。
+				以下が <code>ExpBB</code> に対するパターンマッチのより分かりやすい説明であることを願おう。
+			</p>
+			<p>
+				直感を築くために、<code>Exp</code> 代数の指標、<code>ExpDict</code>に立ち戻り、別の形で、狭義の正の関手（型定数、直和、直積からなる関手）の形で、記述しよう。
+			</p>
+			<pre>data ExpF a = FLit Int&#13;&#10;            | FNeg a&#13;&#10;            | FAdd a a</pre>
+			<p>
+				明らかに <code>ExpF</code> は <code>Exp</code> 構成子の名前と型を  <code>ExpDict</code> と全く同様に記述している。
+				次に、特徴的な名前を持つ2つの関数を定義しよう。
+			</p>
+			<pre>roll :: ExpF ExpBB -&gt; ExpBB&#13;&#10;roll (FLit n) = lit n&#13;&#10;roll (FNeg e) = neg e&#13;&#10;roll (FAdd e1 e2) = add e1 e2&#13;&#10;&#13;&#10;unroll :: ExpBB -&gt; ExpF ExpBB&#13;&#10;unroll e = unExpBB e dlit dneg dadd&#13;&#10;  where&#13;&#10;    dlit :: Int -&gt; ExpF ExpBB&#13;&#10;    dlit n = FLit n&#13;&#10;    dneg :: ExpF ExpBB -&gt; ExpF ExpBB&#13;&#10;    dneg e = FNeg (roll e)&#13;&#10;    dadd :: ExpF ExpBB -&gt; ExpF ExpBB -&gt; ExpF ExpBB&#13;&#10;    dadd e1 e2 = FAdd (roll e1) (roll e2)</pre>
+			<p>
+				<code>roll</code> と <code>unroll</code> という名前は、同型再帰 (iso-recursive) 型と一ステップの展開 (unrolling) が同型であるということを気付かせようとしている。
+				これらの関数はベームとベラルドゥッチの論文に書かれているものの、いくぶんひっそりと書かれている。
+				同型の証拠というだけあって、<code>roll</code> と <code>unroll</code> は互いに逆 (inverse) であるということに気付くだろう。
+				例えば、<code>roll . unroll</code> は<strong>外延的に</strong> (extensionally) 恒等関数と等しい。
+				つまり、いかなる具体的な値 <code>x :: ExpBB</code> も <code>lit</code>、<code>neg</code>、<code>add</code> という構成子から作られるので、<code>roll (unroll x)</code> は <code>x</code> なのである ― これは <code>x</code> の構成についての帰納法で証明できる。
+				論文においては、<code>roll . unroll</code> と恒等関数の外延的等価性については、7節の Eq. (*) で本質的に述べられている。
+				明らかに <code>roll . unroll</code> は<strong>内包的に</strong> (intentionally) は恒等関数でない。
+				どうベータ簡約・イータ簡約を施しても、<code>\x -&gt; roll (unroll x)</code> を <code>\x -&gt; x</code> と同じにはできないからだ。
+				それでも、2項は文脈の上では、見た目の上ではは等しいのだ。
+				（ベームとベラルドゥッチはこの等価性のために <code>~=</code> という記号を導入しつつ、この等価性の特徴を記述するのは未解決問題であると述べている。）
+			</p>
+			<p>
+				<code>ExpBB</code> 型の値の「トップレベル」の構成子を剥き出しにする <code>unroll</code> という関数は、<code>ExpBB</code> の分解子を<strong>体系的に</strong>定義する方法を教えてくれる。
+			</p>
+			<pre>newtype ExpD = ExpD {unED :: forall w. (Int -&gt; w) -&gt; (ExpBB -&gt; w) -&gt; (ExpBB -&gt; ExpBB -&gt; w) -&gt; w}&#13;&#10;&#13;&#10;decon :: ExpBB -&gt; ExpD&#13;&#10;decon e = unExpBB e dlit dneg dadd&#13;&#10;where&#13;&#10;dlit n = ExpD $ \onlit onneg onadd -&gt; onlit n&#13;&#10;dneg e = ExpD $ \onlit onneg onadd -&gt; onneg (unED e lit neg add)&#13;&#10;dadd e1 e2 = ExpD $ \onlit onneg onadd -&gt;&#13;&#10;onadd (unED e1 lit neg add) (unED e2 lit neg add)</pre>
+			<p>
+				分解子の返り値の型である高階関数 <code>ExpD</code> と <code>ExpBB</code> の間には、理解しがたいが重大な違いがある。
+				平たく言えば、<code>ExpBB</code> 型の値が値を一気に展開 (unfold) するのに対し、<code>ExpD</code> は一ステップしか展開しないのである。
+			</p>
+			<p>
+				分解子を説明するために、<code>viewBB</code> を「パターンマッチ」あるいは分解を用いて書き直そう。
+			</p>
+			<pre>viewBBd :: ExpBB -&gt; String&#13;&#10;viewBBd e = unED (decon e) dlit dneg dadd&#13;&#10;  where&#13;&#10;    dlit n = show n&#13;&#10;    dneg e = &quot;(-&quot; ++ viewBBd e ++ &quot;)&quot;&#13;&#10;    dadd e1 e2 = &quot;(&quot; ++ viewBBd e1 ++ &quot; + &quot; ++ viewBBd e2 ++ &quot;)&quot;</pre>
+			<p>
+				このコードは元の <code>view</code> とかなり似ている。
+				分解子の本当のメリットは、構造再帰的でないが再帰的な <code>push_neg</code> を書き換え、符号化された <code>ExpBB</code> について演算ができるということだ。
+			</p>
+			<pre>push_negBB :: ExpBB -&gt; ExpBB&#13;&#10;push_negBB e = unED (decon e) dlit dneg dadd&#13;&#10;  where&#13;&#10;    dlit _ = e&#13;&#10;    dneg e2 = unED (decon e2) dlit2 dneg2 dadd2    &#13;&#10;      where&#13;&#10;        dlit2 n = e&#13;&#10;        dneg2 e = push_negBB e&#13;&#10;        dadd2 e1 e2 = add (push_negBB (neg e1)) (push_negBB (neg e2))&#13;&#10;    dadd e1 e2 = add (push_negBB e1) (push_negBB e2)&#13;&#10;&#13;&#10;tbb1_norm = push_negBB tbb1&#13;&#10;tbb1_norm_viewBB = viewBBd tbb1_norm&#13;&#10;-- &quot;(8 + ((-1) + (-2)))&quot;</pre>
+			<p>
+				関数 <code>push_negBB</code> は元の <code>push_neg</code> と、入れ子になったパターンマッチまでにわたって、同じように見える。
+			</p>
+			<p>
+				<code>roll</code> と <code>unroll</code> について考えると、非効率であると分かる。
+				値 <code>neg (neg (neg ... (lit 1)))</code> を N 個の <code>neg</code> 構成子を使って <code>unroll</code>  すると、N 個の <code>roll</code> を使うことになる。
+				<code>ExpBB</code> で1回分解を行えば、値全体の大きさ（値をつくために必要な構成子の個数）に比例する時間しかかからない。
+				関数 <code>viewBBd</code> は繰り返し分解を行うので、値の大きさについて2乗の計算量を持つのだ。
+			</p>
+		</dd>
+		<dt><strong>バージョン</strong></dt>
+		<dd>2012年4月版</dd>
+		<dt><strong>参考文献</strong></dt>
+		<dd>
+			<a href="BB_LAM.hs">BB_LAM.hs</a> [9K]
+			<br>
+			例に対する Haskell の完全なコード
+			<p>
+				<a href="BoehmBerarducci.ml">BoehmBerarducci.ml</a> [4K]
+				<br>
+				似た例に対する OCaml のコード
+			</p>
+		</dd>
+	</dl>
+
+	<br>
+	<h2><a name="algebra">符号化を始代数として見る</a></h2>
+	<dl>
+		<dd>
+			<p>
+				符号化を少し修正すると深い代数的洞察が得られる。
+				この修正は、データ型をラムダ項へ翻訳するということから少し外れているので、ベームとベラルドゥッチの論文には現れていない。
+				とはいえ修正された符号化は元のものと同型だ。
+				この修正によって <code>roll</code> と <code>unroll</code> はとりわけ簡潔になる。
+				また、この修正は、符号化を始代数と見なして、符号化を継続やストリームと結びつけるのに役立つ。
+			</p>
+			<p>
+				すでに <code>Exp</code> 代数の指標 ― 構成子の名前と型 ― が <code>ExpDict a</code> でも <code>ExpF a</code> でも同じくらいよく記述できるということに触れた。
+				（<code>Exp</code> データ型自体と同じくらいだ。<code>Exp</code> は再帰的だけれども。）
+				しかしつながりはもっと深い。<code>ExpDict a</code> と <code>ExpF a -&gt; a</code> は同型なのだ。これがその証拠だ。
+			</p>
+			<pre>sigma_dict :: (ExpF a -&gt; a) -&gt; ExpDict a&#13;&#10;sigma_dict sigma = ExpDict { dlit = \n -&gt; sigma (FLit n),&#13;&#10;dneg = \e -&gt; sigma (FNeg e),&#13;&#10;dadd = \e1 e2 -&gt; sigma (FAdd e1 e2) }&#13;&#10;&#13;&#10;dict_sigma :: ExpDict a -&gt; (ExpF a -&gt; a)&#13;&#10;dict_sigma dict (FLit n) = dlit dict n&#13;&#10;dict_sigma dict (FNeg e) = dneg dict e&#13;&#10;dict_sigma dict (FAdd e1 e2) = dadd dict e1 e2</pre>
+			<p>
+				<code>U</code> を台 (carrier) とする <code>Exp</code> 代数に対する演算は <code>ExpDict U</code> の値でも <code>ExpF U -&gt; U</code> の関数の形でも記述できる。
+				以前にベームベラルドゥッチ符号化の脱カリー化 (uncurry) された形について述べた：
+			</p>
+			<pre>type ExpBB1 = forall a. (ExpDict a -&gt; a)</pre>
+			<p>
+				これは次に示される、例の符号化と等価な形式のもとになる。
+			</p>
+			<pre>newtype ExpC = ExpC {unExpC :: forall a. (ExpF a -&gt; a) -&gt; a}</pre>
+			<p>
+				これの継続との関連は見逃しがたい。
+				構成子を明示的に書いてみよう。
+			</p>
+			<pre>sigma_expC :: ExpF ExpC -&gt; ExpC&#13;&#10;sigma_expC (FLit n) = ExpC $ \f -&gt; f (FLit n)&#13;&#10;sigma_expC (FNeg e) = ExpC $ \f -&gt; f (FNeg (unExpC e f))&#13;&#10;sigma_expC (FAdd e1 e2) = ExpC $ \f -&gt; f (FAdd (unExpC e1 f) (unExpC e2 f))</pre>
+			<p>
+				<code>ExpC</code> による符号化は <code>ExpBB</code> による符号化と全く等化であり、相互に変換できる。
+				これはデータ型を定義に含んでいるので、ベームベラルドゥッチの論文でこのことは述べられていない。
+				ベームとベラルドゥッチの構想は、データ型をラムダ項のみへと符号化することであったからだ。
+				<code>ExpC</code> を使う利点の一つは、関数 <code>roll</code> と <code>unroll</code> をとりわけ簡潔で、意味の分かりやすい形にできることだ：
+			</p>
+			<pre>rollC :: ExpF ExpC -&gt; ExpC&#13;&#10;rollC = sigma_expC&#13;&#10;&#13;&#10;unrollC :: ExpC -&gt; ExpF ExpC&#13;&#10;unrollC e = unExpC e (fmap sigma_expC)</pre>
+			<p>
+				<code>unrollC</code> の定義は熟考に値する。
+			</p>
+			<p>
+				<code>ExpC</code> を台とし、<code>sigma_ExpC</code> を演算関数とする代数は、関手 <code>ExpF</code> の始代数となっている。
+				<code>U</code> を台とし、<code>sigma :: ExpF U -&gt; U</code> を演算関数とする任意の <code>ExpF</code> 代数について、<code>hc sigma . sigma_ExpC = sigma . fmap (hc sigma)</code> を満たすような準同型 (homomorphism) <code>(hc sigma) :: ExpC -&gt; U</code> が一意に存在する。
+				実に、事例を単純に分析するだけで、<code>hc</code> に対する一意な式が得られるのだ：
+			</p>
+			<pre>hc :: (ExpF a -&gt; a) -&gt; ExpC -&gt; a&#13;&#10;hc sigma e = unExpC e sigma</pre>
+			<p>
+				一意の準同型は簡潔であるだけでなく実用的でもある。
+				<code>ExpF</code> 代数を <code>String</code> を台として定義し、以下の演算を定義しよう。
+			</p>
+			<pre>sigma_view :: ExpF String -&gt; String&#13;&#10;sigma_view (FLit n) = show n&#13;&#10;sigma_view (FNeg e) = &quot;(-&quot; ++ e ++ &quot;)&quot;&#13;&#10;sigma_view (FAdd e1 e2) = &quot;(&quot; ++ e1 ++ &quot; + &quot; ++ e2 ++ &quot;)&quot;</pre>
+			<p>
+				すると、ただちに <code>ExpC</code> の値を見るための関数が得られるのだ。
+			</p>
+			<pre>viewC :: ExpC -&gt; String&#13;&#10;viewC = hc sigma_view</pre>
+			<p>
+				これまで、修正された符号化（そしてそれゆえ元のベームベラルドゥッチ符号化が）始代数であるということを示してきた。
+				修正によって、「構成子」を一皮むいて洞察に満ちた形にする演算が得られる。
+				この修正によって、符号化を余代数と結びつける道も開けるのだ。
+			</p>
+		</dd>
+		<dt><strong>バージョン</strong></dt>
+		<dd>2012年4月版</dd>
+		<dt><strong>参考文献</strong></dt>
+		<dd><a href="BB_LAM.hs">BB_LAM.hs</a> [9K]
+			<br>
+			例に対する Haskell の完全なコード
+		</dd>
+	</dl>
+
+	<br>
+	<h2><a name="cdr-fstream">関数的ストリームで<code>tail</code>を取る方法</a></h2>
+	<dl>
+		<dd>
+			<p>
+				ベームベラルドゥッチ符号化を余代数的データ型 (co-algebraic data type) であるストリームに応用する方法を示す。
+				ベームベラルドゥッチ構成子は一般再帰に頼らず無限のストリームを築くことは出来ない。
+				しかし、ベームベラルドゥッチ分解子はそのままの形で、無限のものを含めて、ストリームを分解／変形するのに使えるのだ。
+				次の関数的ストリームかそのモナド版が与えられたとしよう：
+			</p>
+			<pre>newtype FStream a = SFK (forall ans. SK a ans -&gt; FK ans -&gt; ans)&#13;&#10;type FK ans   = () -&gt; ans          -- 失敗した継続&#13;&#10;type SK a ans = a -&gt; FK ans -&gt; ans -- 成功した継続&#13;&#10;&#13;&#10;newtype MFStream m a = MSFK (forall ans. MSK m a ans -&gt; MFK m ans -&gt; m ans)&#13;&#10;type MFK m ans   = m ans                   -- 失敗した継続&#13;&#10;type MSK m a ans = a -&gt; MFK m ans -&gt; m ans -- 成功した継続</pre>
+			<p>
+				問題は、どうやってストリームの初めの<strong>いくつかの</strong>要素を得るかということだ。
+				一般に、問題は、空でない関数的ストリームを、先頭要素と再び分割するなどできる残りのストリームへと分割することだ。
+				残りは <code>MFStream m a</code> 型のストリームでなければならない。
+				これは見た目よりもずっと難しい問題だ。
+				ここで、函数的ストリームを普通に <code>nil</code>/<code>lazyCons</code> へと変換するだけでいいと思う人もいるかもしれない。例えば：
+			</p>
+			<pre>mfstream_to_stream :: (Monad m) =&gt; MFStream m a -&gt; m (Stream a)&#13;&#10;mfstream_to_stream mfstream = unMSFK mfstream sk fk&#13;&#10;  where fk = return Nil&#13;&#10;        sk a fk' = fk' &gt;&gt;= (\rest -&gt; return (Cons a (\ () -&gt; rest)))</pre>
+			<p>
+				しかし、モナド <code>m</code> が正格（つまりバインド演算 <code>&gt;&gt;=</code> が第一引数の評価を強制する ― <code>IO</code> モナドがその一例だ）であるならば、函数的ストリームを最初のいくつかの要素を確かめる前に普通のストリームに完全に戻さなければならない。
+				入力の関数的ストリームが無限であれば、<code>mfstream_to_stream</code> は発散する。
+			</p>
+			<p>
+				以下のコードは問題を説明し、一般的な解決法を示す。なお、この解決法は、<code>LogicT</code> モナド変換子の基盤となっている。
+			</p>
+		</dd>
+		<dt><strong>バージョン</strong></dt>
+		<dd>バージョン1.2、2005年7月4日版</dd>
+		<dt><strong>参考文献</strong></dt>
+		<dd>
+			<a href="../../Haskell/car-fstream.lhs">car-fstream.lhs</a> [6K]
+			<a href="../../Haskell/car-fstream-jp.lhs">car-fstream-jp.lhs</a>（日本語版）[5K]
+			<br>
+			例と説明のある文芸的 Haskell コード
+		</dd>
+	</dl>
+
+	<br>
+	<div><hr></div>
+	<h3>原文の最終更新は2012年4月5日、訳文の最終更新は2014年5月18日</h3>
+	原文は <a href="http://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html">http://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html</a>
+	<br>
+	このサイトのトップページは <a href="http://kinokkory.github.io/okmij/"><strong>http://kinokkory.github.io/okmij/</strong></a>
+</body>
+</html>
