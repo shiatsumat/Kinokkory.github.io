@@ -1,0 +1,171 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/html4/loose.dtd">
+<html lang="ja">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta http-equiv="Content-Script-Type" content="text/javascript">
+	<meta http-equiv="Content-Style-Type" content="text/css">
+	<meta name="author" content="Kinokkory">
+	<link rel="stylesheet" href="../default.css">
+	<title>car-fstream.lhs</title>
+</head>
+<body>
+	<!-- google code prettify -->
+	<script type="text/javascript" src="https://google-code-prettify.googlecode.com/svn/loader/run_prettify.js"></script>
+<pre>
+関数的ストリームの tail を取る方法
+
+つまり、関数的成功／失敗継続ストリームの最初の数要素を、最初に普通のCons/Nilストリームに変換せずに取得する方法である。
+後者の変換は信用ならない ― 正格なモナドに対するモナディックな関数的ストリームについては発散するからだ。
+以下のテクニックは後者の場合でも動作する。
+
+&gt; {-# LANGUAGE Rank2Types #-}
+&gt; module Streams where
+&gt; import Control.Monad.Identity
+
+（無限になる可能性のある）ストリームを表す最も一般的な方法は、以下の「再帰的」型のデータ構造として表す方法だ。
+
+&gt; data Stream a = Nil | Cons a (() -&gt; Stream a)
+
+定義が正格な言語にも当てはまるように、サンク (thunking) は明示されている。
+ストリームを純粋関数的に表現することもできる。以下は再帰的で「ない」が、ランク2の型である。
+
+&gt; newtype FStream a = SFK (forall ans. SK a ans -&gt; FK ans -&gt; ans)
+&gt; type FK ans = () -&gt; ans            -- 失敗継続
+&gt; type SK a ans = a -&gt; FK ans -&gt; ans -- 成功継続
+&gt; unSFK (SFK a) = a
+
+newtype のタグを無視すると（Haskell で適切に任意ランク型を扱う必要があるが）、FStream は2つの継続、成功継続と失敗継続の関数となる。
+後者はストリームが要素を持たない際に呼び出される。
+一要素以上持っている際にストリームは成功継続を呼び出す。
+継続はその要素とほかの失敗継続を受け取って、更なる要素を求める。
+
+明らかに、二つの表現の間には対応がある。たとえば：
+
+&gt; fstream_to_stream fstream = unSFK fstream sk fk
+&gt;    where fk () = Nil
+&gt;      sk a fk' = Cons a fk'
+&gt;
+&gt; stream_to_fstream Nil = SFK( \sk fk -&gt; fk () )
+&gt; stream_to_fstream (Cons a rest) =
+&gt;     SFK(\sk fk -&gt;
+&gt;           sk a (\ () -&gt; unSFK (stream_to_fstream (rest ())) sk fk))
+
+テスト用のストリーム
+
+&gt; s1  = Cons 'a' (\ () -&gt; Cons 'b' (\ () -&gt; Cons 'c' (\ () -&gt; Nil)))
+&gt; f1  = stream_to_fstream s1
+&gt; s1' = fstream_to_stream f1
+&gt;
+&gt; test1 = unSFK f1 (\a k -&gt; a:(k())) (\() -&gt; [])
+
+    *Streams&gt; test1
+    "abc"
+
+Mitch Wand と D.Vaillancourt (ICFP'04 を見よ) はより形式的に対応を説明している。
+
+とはいえ、二つの表現の間には明らかな違いがある。
+Stream の初めの2要素は容易に求められる:
+
+&gt; stream_take:: Int -&gt; Stream a -&gt; [a]
+&gt; stream_take 0 _ = []
+&gt; stream_take n (Cons a r) = a : (stream_take (n-1) $ r ())
+
+FStream を最初に全部 Stream に変換せずに最初の2要素を求めるのはほとんど不可能に見える。
+この変換は、モナディックな関数的ストリームを持っている場合、扱いにくい。
+
+&gt; newtype MFStream m a = MSFK (forall ans. MSK m a ans -&gt; MFK m ans -&gt; m ans)
+&gt; type MFK m ans = m ans                     -- failure continuation
+&gt; type MSK m a ans = a -&gt; MFK m ans -&gt; m ans -- success continuation
+&gt; unMSFK (MSFK a) = a
+&gt;
+&gt;
+&gt; mfstream_to_stream:: (Monad m) =&gt; MFStream m a -&gt; m (Stream a)
+&gt; mfstream_to_stream mfstream = unMSFK mfstream sk fk
+&gt;    where fk = return Nil
+&gt;      sk a fk' = fk' &gt;&gt;= (\rest -&gt; return (Cons a (\ () -&gt; rest)))
+
+もし m が正格なモナドで fstream が無限であったら、Stream への変換は発散する。実際、
+
+&gt; nats = nats' 0 where
+&gt;   nats' n = MSFK (\sk fk -&gt; sk n (unMSFK (nats' (n+1)) sk fk))
+&gt;
+&gt; test2 = runIdentity (mfstream_to_stream nats &gt;&gt;= (return . stream_take 5))
+
+  *Streams&gt; test2
+  [0,1,2,3,4]
+
+しかし IO のような正格なモナドだと：
+
+&gt; test3 = mfstream_to_stream nats &gt;&gt;= (print . stream_take 5)
+
+何も表示せずに発散する。
+実は、nats の最初の要素を表示する前に、ストリームをすっかりすべて変換しなければならないのだ。
+
+fstream をただのデータ構造であるかのように分割できると分かった。
+以下の関数は1要素以上を持つ FStream を返す。
+得られるのは、元のストリームの先頭と「残りのストリーム」のペアだ。
+
+&gt; split_fstream :: FStream a -&gt; FStream (a, FStream a)
+&gt; split_fstream fstream = unSFK fstream ssk caseB
+&gt;  where caseB () = SFK(\a b -&gt; b ())
+&gt;        ssk v fk = SFK(\a b -&gt;
+&gt;             a (v, (SFK (\s' f' -&gt;
+&gt;                 unSFK (fk ())
+&gt;                 (\ (v'',x) _ -&gt; s' v''
+&gt;                  (\ () -&gt; unSFK x s' f'))
+&gt;                 f')))
+&gt;               (\ () -&gt; b ()))
+&gt;
+&gt; f11 = split_fstream f1
+&gt; e1  = unSFK f11 (\ (a,_) _ -&gt; a)  undefined
+&gt; f1r = unSFK f11 (\ (_,r) _ -&gt; r)  undefined
+&gt; f1rs = split_fstream f1r
+&gt; e2   = unSFK f1rs (\ (a,_) _ -&gt; a)  undefined
+
+実際、無限ストリーム f1 の最初の二要素を取り出せるのだ。
+
+    *Streams&gt; e1
+    'a'
+    *Streams&gt; e2
+    'b'
+
+モナディックな例（Chung-chieh Shan, Amr A. Sabry, Daniel P. Friedman の論文からほとんどそのまま引用した）
+
+&gt; split_mfstream :: Monad m =&gt; MFStream m a -&gt; m (MFStream m (a, MFStream m a))
+&gt; split_mfstream m = unMSFK m ssk caseB
+&gt;  where caseB =    return $ MSFK(\a b -&gt; b)
+&gt;        ssk v fk = return $ MSFK(\a b -&gt;
+&gt;             a (v, (MSFK (\s' f' -&gt;
+&gt;                 fk &gt;&gt;= (\r -&gt; unMSFK r
+&gt;                 (\ (v'',x) _ -&gt; s' v'' (unMSFK x s' f'))
+&gt;                 f'))))
+&gt;               b)
+
+
+&gt; mfstream_take:: Monad m =&gt; Int -&gt; MFStream m a -&gt; m [a]
+&gt; mfstream_take 0 _ = return []
+&gt; mfstream_take n m = do
+&gt;                     m' &lt;- split_mfstream m
+&gt;                     (v,rs) &lt;- unMSFK m' (\ (v,rs) _ -&gt; return (v,rs) )
+&gt;                               undefined
+&gt;                     rl &lt;- mfstream_take (n-1) rs
+&gt;                     return (v:rl)
+
+&gt; test2' = runIdentity (mfstream_take 5 nats)
+
+    *Streams&gt; test2'
+    [0,1,2,3,4]
+
+
+&gt; test3' = mfstream_take 5 nats &gt;&gt;= print
+
+しかし今やこの場合も
+
+    *Streams&gt; test3'
+    [0,1,2,3,4]
+
+
+</pre>
+</body>
+</html>

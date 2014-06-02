@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/html4/loose.dtd">
+<html lang="ja">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta http-equiv="Content-Script-Type" content="text/javascript">
+	<meta http-equiv="Content-Style-Type" content="text/css">
+	<meta name="author" content="Kinokkory">
+	<link rel="stylesheet" href="../default.css">
+	<title>ZipperTraversable.hs</title>
+</head>
+<body>
+	<!-- google code prettify -->
+	<script type="text/javascript" src="https://google-code-prettify.googlecode.com/svn/loader/run_prettify.js"></script>
+<pre class="prettyprint lang-hs">
+{-# LANGUAGE PatternGuards #-}
+
+-- ジッパーがいかなるトラヴァーサブルからも導き出せるということを実証する。
+-- Haskell-Cafe, 2009/3/31
+
+-- 私は Data.Map をジッパーに変えるトラヴァーサブルのデータ構造の例として使う。
+-- Data.Map はとても豊かなインターフェイスを持っていて、ジッパーなんて要らないから、少し奇妙ではある。
+-- しかし、Data.Map は標準ライブラリで定義されたトラヴァーサブルのインスタンスのうち唯一非自明なものなのだ。
+
+module ZipperTraversable where
+
+import qualified Data.Traversable as T
+import qualified Data.Map as M
+
+
+-- 変数 Z a k において、a は現在の注目している値である。
+-- (k Nothing) を評価すると次に進み、
+-- (k v) を評価すると現在の値を v で置き換えて次に進む。
+
+data Zipper t a = ZDone (t a)
+                | Z a (Maybe a -&gt; Zipper t a)
+
+make_zipper :: T.Traversable t =&gt; t a -&gt; Zipper t a
+make_zipper t = reset $ T.mapM f t &gt;&gt;= return . ZDone
+ where
+ f a = shift (\k -&gt; return $ Z a (k . maybe a id))
+
+-- 全ての道筋をジップして、走査したデータ構造を返す。
+zip_up :: Zipper t a -&gt; t a
+zip_up (ZDone t) = t
+zip_up (Z _ k)   = zip_up $ k Nothing
+
+
+
+-- テスト
+
+-- サンプルのコレクション
+
+tmap = M.fromList [ (v,product [1..v]) | v &lt;- [1..10] ]
+
+-- コレクションからいくつかサンプルの要素を展開する
+trav t =
+    let (Z a1 k1) = make_zipper t
+        (Z a2 k2) = k1 Nothing
+        (Z a3 k3) = k2 Nothing
+        (Z a4 k4) = k3 Nothing
+     in [a1,a3,a4]
+
+travm = trav tmap
+
+-- コレクションの要素を走査し、場合によっては修正する
+tmod t = loop (make_zipper t)
+ where
+ loop (ZDone t) = putStrLn $ "Done\n: " ++ show t
+ loop (Z a k) = do
+                putStrLn $ "Current element: " ++ show a
+                ask k
+
+ ask k =        do
+                putStrLn "Enter Return, q or the replacement value: "
+                getLine &gt;&gt;= check k
+
+ check k ""   = loop $ k Nothing
+ check k "\r" = loop $ k Nothing
+ check k ('q':_) = loop . ZDone . zip_up $ k Nothing
+ check k s  | [(n,_)] &lt;- reads s = loop $ k (Just n) -- replace
+ check k _    = putStrLn "Repeat" &gt;&gt; ask k
+
+testm = tmod tmap
+
+
+-- 限定継続に対する Cont モナド
+-- インポートにおいてモナドトランスフォーマーライブラリーと衝突するのを避けるためにここで実装している
+
+newtype Cont r a = Cont{runCont :: (a -&gt; r) -&gt; r}
+
+instance Monad (Cont r) where
+    return x = Cont $ \k -&gt; k x
+    m &gt;&gt;= f  = Cont $ \k -&gt; runCont m (\v -&gt; runCont (f v) k)
+
+-- 二つの限定継続の演算
+-- 答えの型についての多相や修正は、ここでの応用に要らないので含まない
+
+reset :: Cont r r -&gt; r
+reset m = runCont m id
+
+shift :: ((a -&gt; r) -&gt; Cont r r) -&gt; Cont r a
+shift e = Cont (\k -&gt; reset (e k))
+</pre>
+</body>
+</html>
