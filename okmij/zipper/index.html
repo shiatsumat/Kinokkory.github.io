@@ -1,0 +1,385 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/html4/loose.dtd">
+<html lang="ja">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta http-equiv="Content-Style-Type" content="text/css">
+	<meta name="author" content="Kinokkory">
+	<meta name="description" content="データ構造の走査の派生物としての一般的ジッパー。ジッパーのファイルシステム。より高度な走査の派生物と複数の穴を持つジッパー。">
+	<meta name="date" content="May 21, 2014">
+	<link rel="contents"  href="../">
+	<link rel="stylesheet" href="../default.css">
+	<title>一般的ジッパー：走査との関連において</title>
+</head>
+<body>
+	<!-- google code prettify -->
+	<script src="https://google-code-prettify.googlecode.com/svn/loader/run_prettify.js"></script>
+	<!-- google plus -->
+	<script type="text/javascript">
+	window.___gcfg = {lang: 'ja'};
+	(function() {
+		var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+		po.src = 'https://apis.google.com/js/platform.js';
+		var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+	})();
+	</script>
+	<!-- facebook -->
+	<div id="fb-root"></div>
+	<script>
+	(function(d, s, id) {
+		var js, fjs = d.getElementsByTagName(s)[0];
+		if (d.getElementById(id)) return;
+		js = d.createElement(s); js.id = id;
+		js.src = "//connect.facebook.net/ja_JP/sdk.js#xfbml=1&version=v2.0";
+		fjs.parentNode.insertBefore(js, fjs);
+	}(document, 'script', 'facebook-jssdk'));
+	</script>
+
+	<div align="center"><a href="../">目次</a><hr></div>
+	<div align="center"><h1>一般的ジッパー：走査との関連において</h1></div>
+	<br>
+	<ul>
+		<li><a href="#introduction">ジッパー：データ構造あるいはそのマッピングの派生物</a></li>
+		<li><a href="#traversable">任意のトラヴァーサブルからジッパーを作る</a></li>
+		<li><a href="#zipper-fs">ジッパーベースのファイルサーバー／OS</a></li>
+		<li><a href="#context-OS">オペレーティングシステムにおける限定継続</a></li>
+		<li><a href="#zipper-diff">複数のデータ構造を比較し注釈を付けるためにジッピングする</a></li>
+		<li><a href="#zipper2">複数の穴を持つジッパー</a></li>
+	</ul>
+	<hr>
+
+	<br>
+	<h2><a name="introduction">ジッパー：データ構造あるいはそのマッピングの派生物</a></h2>
+	<dl>
+		<dd>
+			<p>
+				ジッパーはデータ構造を覗きこむ関数的カーソルである。
+				ジッパーを使えば、破壊的操作を加えずに、木、または入れ子になったレコードの深くに埋め込まれたアイテムまで進んでいって、そのアイテムを変更できる。
+				そうして得られるのは、ほとんどの要素を元のデータと共有している、新しいデータ構造である。
+				しかも、すぐに変化を巻き戻せるので、元のデータは手に入る。
+				つまり、ジッパーはデータ構造を<strong>コピーオンライト</strong>で更新することを実現しているのである。
+			</p>
+			<p>
+				ジッパーはデータ構造を覗きこむ関数的カーソルであり、それ自体が元のデータから<strong>派生した</strong> (derived) データ構造である。
+				再帰的データ型 <code class="prettyprint">D</code> から派生したデータ型 <code class="prettyprint">D'</code> はちょうど一つの穴を持つ <code class="prettyprint">D</code> である。
+				その穴を埋める ―― 穴のありうる全ての位置について積分する ―― ことによってデータ型 <code class="prettyprint">D</code> が戻ってくるのである。
+				ジッパーはデータ型の<strong>派生物</strong> (derivative) であるが、それは計算的な意味を持つ［英語の derivative には「導関数」という意味もある。derive という言葉の二重の意味合いに注意してほしい。微分・積分というのはとりあえず形式的に理解しておけばいいと思う］。
+				「ジッパーはデータ型」観 (zipper-as-datatype view) が最初に提案されたのであり、この見方についてはユエ (Huet, JFP 1997) 、ヒンズィーとヨイリング (Hinze and Jeuring, JFP 2001) が説明している。
+				データ構造の派生物［導関数］という考え方はマクブライド (McBride) によって詳説されている。
+			</p>
+			<p>
+				ここで私は違う見方を提唱する。
+				データ構造をくぐり抜けて目的のアイテムに辿り着いてそれを展開した結果自体ではなくて、この辿り着く過程を強調する見方である。
+				それぞれのデータ構造には、その構成要素を列挙し、その列挙の過程で訪れる節点の<strong>ストリーム</strong>としてデータ構造を表現する方法が付随している。
+				ユーザーがアイテムに焦点を合わせて更新するためには、列挙のプロセスが、アイテムに辿り着いたときに、ユーザーに制御を譲る必要がある。
+				コルーチンは正しい生成メカニズムをまさしく提供しなければならない。
+				單中杰 (Chung-chieh Shan, シャンジョンジエ) 氏はいみじくもこう言った。「ジッパーは保留された歩みである。」("zipper is a suspended walk.")
+			</p>
+			<p>
+				「データ型の派生物としてのジッパー」(datatype-derivative zipper) が必ずデータ型に依存している（違うデータ型は違う派生物［導関数］を持つ）一方で、「保留された歩みとしてのジッパー」(suspended-walk zipper) はデータ型の不変量 (datatype-invariant) である。
+				［後者を作るには、］任意の関数をデータ構造の各要素に適用するための走査手続き (traversal procedure) さえあればいい。
+				ジッパーは <code class="prettyprint">yield</code> する (譲る) マッピング関数を与えることで得られるのだ。
+				走査手続きは［型について］総称的に多くのデータ型を扱える（<code class="prettyprint">map</code> について考えよ）ので、ジッパーも総称的に多くのデータ型を扱えるのである。
+				私たちのジッパー型は走査関数というインターフェイスにしか依存していない。
+			</p>
+			<p>
+				ジッパーについてのこの二つの見方は双対である。
+				どちらもジッパーをデータ構造の操作と関連しているとみなすのだ。
+				その関連の様子は関数的な形（走査の保留、つまり限定継続）に落とし込めるし、脱関数化した (defunctionalized) データ型としての形にも落とし込める。
+			</p>
+		</dd>
+		<dt><strong>参考文献</strong></dt>
+		<dd>
+			zipper data structure <a href="http://www.nist.gov/dads/HTML/zipper.html">&lt; http://www.nist.gov/dads/HTML/zipper.html &gt;</a>
+			<p>
+				ラルフ＝ヒンズィー＆ヨハン＝ヨイリング：<a href="./WeavingAWeb.pdf">クモの巣をくぐって (Weaving a Web)</a>
+				<br>
+				Journal of Functional Programming 11(6), pages 681 - 689, 2001. Technical report ICS Utrecht University, UU-CS-2001-33.
+			</p>
+		</dd>
+	</dl>
+
+	<br>
+	<h2><a name="traversable">任意のトラヴァーサブルからジッパーを作る</a></h2>
+	<dl>
+		<dd>
+			<p>
+				総称的ジッパー (generic zipper) は、実装の隠されたいかなる抽象的データ型に対しても導き出すことができる。
+				データ型が <code class="prettyprint">Data.Traversable</code> のインターフェイスを実装している ―― 最小限、<code class="prettyprint">mapM</code> のようなものを提供している ―― 限り、ジッパーにすることができる。
+				総称的 ―― つまり、データ型の詳細は知る必要が無いし、その場で要素が計算される短命なコレクションでなくて、実際にデータ構造であるかどうかを知る必要も無い。
+			</p>
+			<p>
+				<code class="prettyprint">Data.Map</code> に対してジッパーを導き出すことによって、ジッパーが保留された走査であるということを検証しよう。
+				<code class="prettyprint">Data.Map</code> は有限マップに対する Haskell の標準の抽象データ型である。
+				ただし、<code class="prettyprint">Data.Map</code> はマップの要素を見たり更新したりするための方法がたくさんある豊かなインターフェイスを持つので、この例は少しぎこちない。
+				一方で、<code class="prettyprint">Data.Map</code> は標準ライブラリで定義されている  <code class="prettyprint">Traversable</code> のインスタンスのうち唯一非自明なものである。
+				Zipper1.lhs ではより面白いジッパー ―― ラムダ計算項を登ったり下ったりするジッパー ―― について書いている。
+				入れ子になったマップ（これはファイルシステムのモデルである）へのジッピングについては以下の ZipperFS で説明している。
+			</p>
+			<pre class="prettyprint">data Zipper t a = ZDone (t a)&#13;&#10;                | Z a (Maybe a -&gt; Zipper t a)&#13;&#10;&#13;&#10;make_zipper :: T.Traversable t =&gt; t a -&gt; Zipper t a&#13;&#10;make_zipper t = reset $ T.mapM f t &gt;&gt;= return . ZDone&#13;&#10;  where&#13;&#10;    f a = shift (\k -&gt; return $ Z a (k . maybe a id))&#13;&#10;</pre>
+			<p>
+				以下の数行だけでジッパーが実装できる。
+				有効な「ポインタ」<code class="prettyprint">Z a k</code> は、現在注目しているマップの要素と、前に進める関数 <code class="prettyprint">k</code> を持っている。
+				<code class="prettyprint">k Nothing</code> を評価すると、次の要素へのカーソルが返ってくる。
+				<code class="prettyprint">k v</code> を評価すると、現在の要素を <code class="prettyprint">v</code> で置き換えてカーソルを進めることになる。
+				以下の完全なコードは関数 <code class="prettyprint">tmod</code> を定義する。
+				この関数は、マップを対話的に走査する ―― 要素を一つずつ表示して現在の要素の修正を提案する ―― か、走査をやめることができる。
+				これが対話のサンプルだ。
+			</p>
+			<pre>Current element: 1&#13;&#10;Enter Return, q or the replacement value:&#13;&#10;&#13;&#10;Current element: 2&#13;&#10;Enter Return, q or the replacement value:&#13;&#10;&#13;&#10;Current element: 6&#13;&#10;Enter Return, q or the replacement value:&#13;&#10;42&#13;&#10;Current element: 24&#13;&#10;Enter Return, q or the replacement value:&#13;&#10;q&#13;&#10;Done:&#13;&#10;fromList [(1,1),(2,2),(3,42),(4,24),(5,120),(6,720),(7,5040),(8,40320),(9,362880),(10,3628800)]&#13;&#10;</pre>
+			<p>
+				実際に、マップの3番目の要素は <code class="prettyprint">42</code> に置き換えられた。
+			</p>
+		</dd>
+		<dt><strong>バージョン</strong></dt>
+		<dd>現在のバージョンは2011年2月版。</dd>
+		<dt><strong>参考文献</strong></dt>
+		<dd>
+			<a href="../Haskell/ZipperTraversable.hs">ZipperTraversable.hs</a> [3K]
+			<br>
+			Haskell 2010 の完全なコード
+			<br>
+			このコードはもともと <cite>Zippers from any traversable</cite> として Haskell-Cafe メーリングリストに投稿された (2009/3/31 (火) 23:59:46 -0700 (PDT))。
+			<p><a href="../Haskell/Zipper1.lhs">Zipper1.lhs</a> [12K]
+				<br>
+				Introduction to generic zippers as delimited continuations
+				<br>
+				The code was originally posted as <cite>Zipper as a delimited continuation</cite> on the Haskell mailing list on Wed, 27 Apr 2005 16:17:04 -0700 (PDT)
+				<br>
+
+				The new version of the code demonstrates deriving zipper
+				from a different traversal function, with a more intuitive interface,
+				suggested by Ron de Bruijn. The zipper declaration and
+				the navigation functions remain the same: the delimited-control--based
+				zipper is generic indeed. The new version of the code
+				relies on the delimcc library of delimited control in Haskell.
+			</p>
+			<p>
+				Chung-chieh Shan: From walking to zipping, Part 3: Caught in a zipper
+				<br>
+				<a href="http://conway.rutgers.edu/~ccshan/wiki/blog/posts/WalkZip3/">&lt; http://conway.rutgers.edu/~ccshan/wiki/blog/posts/WalkZip3/ &gt;</a>
+				<br>
+
+				Our <code class="prettyprint">Data.Map</code> zipper moves only forward. Chung-chieh Shan
+				has explained in detail how to turn any
+				one-directional zipper into bi-directional. Again generically.
+			</p>
+			<p><a href="generators.html#foldable">Generator from any Foldable</a></p>
+			<p>
+				<a href="../Scheme/misc.html#zipper">Zipper in Scheme</a>
+				<br>
+				An old derivation, using call/cc to implement delimited control to model suspension.
+			</p>
+		</dd>
+	</dl>
+
+	<br>
+	<h2><a name="zipper-fs">ジッパーベースのファイルサーバー／OS</a></h2>
+	<dl>
+		<dd>
+			<p>
+				We present a file server/OS with threading and exceptions realized
+				via delimited continuations. A file system is modeled as a nested
+				finite map, relying on zipper for navigation and updates.
+				The outcome looks like the Unix file system, with the improved
+				semantics: transactions; undo of any file and directory operation;
+				snapshots; statically guaranteed the strongest, repeatable read,
+				isolation mode for clients; pervasive copy-on-write for files and
+				directories; built-in traversal facility; the expected behavior for
+				cyclic directory references.
+			</p>
+			<p>
+				We can easily change our file server to support NFS or 9P or
+				other distributed file system protocol. We can traverse richer terms than
+				mere finite maps with string keys. In particular, we can use
+				lambda-terms as our file system: one could <code class="prettyprint">cd</code> into a lambda-term in
+				<code class="prettyprint">bash</code>.
+			</p>
+			<p>
+				The implementation of ZipperFS has no unsafe operations, no GHC let
+				alone Unix threads, and no concurrency problems. Our threads cannot even
+				do IO and cannot mutate any global state --- and <em>the type
+				system sees to it</em>.  We thus demonstrate how delimited
+				continuations let us statically isolate effects even if the whole
+				program eventually runs in the IO monad.
+			</p>
+		</dd>
+		<dt><strong>Version</strong></dt>
+		<dd>The current version is February 2011.</dd>
+		<dt><strong>References</strong></dt>
+		<dd>
+			<a href="ZFS/zfs-talk.pdf">zfs-talk.pdf</a> [98K]
+			<br>
+			Expanded talk with the demo. It was originally presented as an extra demo at the Haskell Workshop 2005
+			<p>
+				<a href="ZFS/ZFS.hs">ZFS.hs</a> [18K]
+				<br>
+				The commented source code of the interrupt handler, scheduling loop, and the shell.
+				<br>
+				The code has tested with GHC 6.4-6.10 on FreeBSD and Linux.
+			</p>
+			<p>
+				<a href="ZFS/ZipperM.hs">ZipperM.hs</a> [8K]
+				<br>
+				Zipper over the nested Map with path accumulation and sharing preservation
+			</p>
+			<p>
+				<a href="ZFS/LowLevelIO.hs">LowLevelIO.hs</a> [4K]
+				<br>
+				Low-level IO operations, specifically, <code class="prettyprint">select</code>
+				<br>
+				(also used by the Iteratee library)
+			</p>
+		</dd>
+	</dl>
+
+	<br>
+	<h2><a name="context-OS">オペレーティングシステムにおける限定継続</a></h2>
+	<dl>
+		<dd>
+			<p>
+				[論文のアブストラクト]
+				<br>
+				<strong>限定継続</strong>はプログラミング言語の限定された評価文脈を意味する。
+
+				<em>Delimited continuations</em> are the meanings of delimited
+				evaluation contexts in programming languages.  We show they offer a
+				uniform view of many scenarios that arise in systems programming, such
+				as a request for a system service, an event handler for input/output,
+				a snapshot of a process, a file system being read and updated, and a
+				Web page. Explicitly recognizing these uses of delimited
+				continuations helps us design a system of concurrent, isolated
+				transactions where desirable features such as snapshots, undo,
+				copy-on-write, reconciliation, and interposition fall out by default.
+				It also lets us take advantage of efficient implementation techniques
+				from programming-language research.  The Zipper File System
+				prototypes these ideas.
+			</p>
+			<p>
+				單中杰との共著。
+				Joint work with Chung-chieh Shan.
+			</p>
+			<p>
+				Olivier Danvy has very kindly pointed out that continuations
+				in operating systems delimited at process, job, etc. boundaries were
+				first mentioned back in 1974 in the seminal work by Christopher
+				Strachey and Christopher P. Wadsworth `Continuations: A
+				mathematical semantics for handling full jumps.' Technical Monograph
+				PRG-11, Programming Research Group, Oxford University Computing
+				Laboratory, 1974. Reprinted in Higher-Order and Symbolic Computation, 2000,
+				13(1-2):135-152. Here is footnote 1 from their paper:
+			</p>
+
+			<dl>
+				<dd>
+					The reader may ask if it is any more justifiable to
+					take a single program in isolation than it is to take a single
+					command. The answer, of course, is that it is not, and that in the
+					same way as command continuations are needed to explain jumps inside
+					programs, further hierarchical levels of continuations, such as
+					process continuations, job continuations and operating system
+					continuations, will be needed to give the semantics of the operating
+					system. The outer-most level (or possibly levels) are not inside the
+					machine at all and are implemented by operator intervention.  We do
+					not discuss the use of continuations in the semantics of operating
+					systems any further in this paper as to do so would require a fuller
+					understanding of the differences between operating systems and
+					programs that is yet at our disposal. It would also make the paper
+					much too long...
+				</dd>
+			</dl>
+			<dt><strong>Version</strong></dt>
+			<dd>The current version is 1.2, June 1, 2007.</dd>
+			<dt><strong>References</strong></dt>
+			<dd><a href="ZFS/context-OS.pdf">context-OS.pdf</a> [134K]
+				<br>
+				Proc. CONTEXT2007: 6th International and Interdisciplinary Conference on Modeling and Using Context. Roskilde, Denmark, August 20-24, 2007. Lecture Notes in Artificial Intelligence 4635, pp. 291-302.
+				<p>
+					Poster presented at CONTEXT 2007, Roskilde U., Denmark, August 22, 2007.
+					<br>
+					<a href="http://www.cs.rutgers.edu/~ccshan/zipper/poster.ps">&lt; http://www.cs.rutgers.edu/~ccshan/zipper/poster.ps &gt;</a>
+				</p>
+			</dd>
+		</dl>
+
+		<br>
+		<h2><a name="zipper-diff">複数のデータ構造を比較し注釈を付けるためにジッピングする</a></h2>
+		<dl>
+			<dd>
+				Zipping through two data structures to compare them side-by-side and
+				annotate the differing components is a more interesting, and practical
+				application of zippers, highlighting the incremental traversal and the
+				functional update. The example has been motivated by a practical
+				application to compare two XML documents disregarding the inline
+				markup. To process large XML documents the processing has to be done
+				inplace, minimizing copying and rebuilding of the DOM tree (SXML
+				document).  If two documents are the same, modulo the inline markup,
+				the comparison procedure returns the original documents as they are,
+				with no copying of the DOM tree or its branches. The example is a
+				non-trivial generalization of the ``same fringe problem'' -- not only
+				do we detect a single difference, we return the updated documents
+				where each paragraph with the difference in character content
+				is marked.
+			</dd>
+
+			<dt><strong>Version</strong></dt>
+			<dd>The current version is 1.1, August 23, 2005.</dd>
+			<dt><strong>References</strong></dt>
+			<dd><a href="../Scheme/xml.html#SXML-diff">Joint processing of two immutable SXML documents with update cursors</a></dd>
+		</dl>
+
+		<br>
+		<h2><a name="zipper2">複数の穴を持つジッパー</a></h2>
+		<dl>
+			<dd>
+				Suspending the traversal of a term gives us zipper for the term.
+				Suspending several concurrent traversals of the term gives us
+				zipper with several holes. Concurrent traversals are based
+				on delimited continuations, which let us view a single-threaded program
+				as cooperatively multi-threading. We support various isolation
+				modes of concurrent traversals: from ``uncommitted read'' to
+				``repeatable read'' to ``serializable'' -- and even
+				sub-transactions. We can use either the push mode -- one cursor
+				broadcasting its updates to the others -- or the pull mode. A cursor may
+				decide to broadcast the accumulated updates at arbitrary checkpoints of its
+				own choosing. A cursor may examine updates made by the other cursor
+				and perhaps disregard some of them -- or apply in a different order,
+				after its own updates.  We are using terms zipper, cursor and
+				transaction somewhat interchangeably: a zipper is a cursor which is by
+				default isolated from the others and whose updates are instantly
+				reversible.
+			</dd>
+			<dt><strong>Version</strong></dt>
+			<dd>The current version is February 2011.</dd>
+			<dt><strong>References</strong></dt>
+			<dd>
+				<a href="../Haskell/Zipper2.lhs">Zipper2.lhs</a> [22K]
+				<br>
+				The detailed, commented code, originally posted as <cite>Two-hole zippers and transactions of various isolation modes</cite> on the Haskell mailing list on Tue, 10 May 2005 23:11:06 -0700 (PDT). The new version of the code uses the <code class="prettyprint">delimcc</code> library.
+			</dd>
+		</dl>
+		<br>
+		<div><hr></div>
+		<div align="center">
+			<h3>原文の最終更新は2011年5月4日、訳文の最終更新は2014年5月21日</h3>
+			<p>
+				原文は <a href="http://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html">http://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html</a>
+				<br>
+				このサイトのトップページは <a href="http://kinokkory.github.io/okmij/"><strong>http://kinokkory.github.io/okmij/</strong></a>
+			</p>
+			<!-- twitter -->
+			<a href="https://twitter.com/share" class="twitter-share-button" data-via="shiatsumat" data-lang="ja">ツイート</a>
+			<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+			<!-- hatena bookmark -->
+			<script type="text/javascript">
+			document.write('<a href="http://b.hatena.ne.jp/entry/' + document.URL + '" class="hatena-bookmark-button" data-hatena-bookmark-title="' + document.title + '" data-hatena-bookmark-layout="standard-balloon" data-hatena-bookmark-lang="ja" title="このエントリーをはてなブックマークに追加"><img src="http://b.st-hatena.com/images/entry-button/button-only@2x.png" alt="このエントリーをはてなブックマークに追加" width="20" height="20" style="border: none;" /></a>');
+			</script>
+			<script type="text/javascript" src="http://b.st-hatena.com/js/bookmark_button.js" charset="utf-8" async="async"></script>
+			<!-- google plus -->
+			<div class="g-plusone" data-annotation="inline" data-width="300"></div>
+			<!-- facebook -->
+			<div class="fb-like" data-href="https://developers.facebook.com/docs/plugins/" data-layout="standard" data-action="like" data-show-faces="true" data-share="true"></div>
+		</script>
+	</div>
+</body>
+</html>
