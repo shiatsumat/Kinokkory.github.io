@@ -7,7 +7,7 @@
 	<meta http-equiv="Content-Style-Type" content="text/css">
 	<meta name="author" content="Kinokkory">
 	<meta name="description" content="データ構造の走査の派生物としての一般的ジッパー。ジッパーのファイルシステム。より高度な走査の派生物と複数の穴を持つジッパー。">
-	<meta name="date" content="June 2, 2014">
+	<meta name="date" content="June 4, 2014">
 	<link rel="contents"  href="../">
 	<link rel="stylesheet" href="../default.css">
 	<title>一般的ジッパー：走査との関連において</title>
@@ -44,7 +44,7 @@
 		<li><a href="#traversable">任意のトラヴァーサブルからジッパーを作る</a></li>
 		<li><a href="#zipper-fs">ジッパーベースのファイルサーバー／OS</a></li>
 		<li><a href="#context-OS">オペレーティングシステムにおける限定継続</a></li>
-		<li><a href="#zipper-diff">複数のデータ構造を比較し注釈を付けるためにジッピングする</a></li>
+		<li><a href="#zipper-diff">ジッピングして複数のデータ構造を比較し注釈を付ける</a></li>
 		<li><a href="#zipper2">複数の穴を持つジッパー</a></li>
 	</ul>
 	<hr>
@@ -133,7 +133,7 @@
 			</p>
 		</dd>
 		<dt><strong>バージョン</strong></dt>
-		<dd>現在のバージョンは2011年2月版。</dd>
+		<dd>2011年2月版</dd>
 		<dt><strong>参考文献</strong></dt>
 		<dd>
 			<a href="ZipperTraversable.hs.html">ZipperTraversable.hs</a> [3K]
@@ -147,82 +147,77 @@
 				<br>
 				このコードはもともと <cite>Zippers from any traversable</cite> として Haskell-Cafe メーリングリストに投稿された (2005/4/27 (水) 16:17:04 -0700 (PDT))。
 				<br>
-				The new version of the code demonstrates deriving zipper
-				from a different traversal function, with a more intuitive interface,
-				suggested by Ron de Bruijn. The zipper declaration and
-				the navigation functions remain the same: the delimited-control--based
-				zipper is generic indeed. The new version of the code
-				relies on the delimcc library of delimited control in Haskell.
+				この新しいバージョンのコードは異なる走査関数から、より直感的なインターフェースでジッパーを導き出す、ロン＝ド＝ブランによって提案された方法を実証している。
+				ジッパーの宣言と移動関数は同じままである。
+				限定継続ベースのジッパーは実に一般的だからである。
+				この新しいバージョンのコードは Haskell で限定継続を扱うための delimcc ライブラリに依存している。
 			</p>
 			<p>
-				Chung-chieh Shan: From walking to zipping, Part 3: Caught in a zipper
+				單中杰『歩みからジッピングへ Part 3 : ジッパーに捕まって』
 				<br>
 				<a href="http://conway.rutgers.edu/~ccshan/wiki/blog/posts/WalkZip3/">&lt; http://conway.rutgers.edu/~ccshan/wiki/blog/posts/WalkZip3/ &gt;</a>
 				<br>
-
-				Our <code class="prettyprint lang-hs">Data.Map</code> zipper moves only forward. Chung-chieh Shan
-				has explained in detail how to turn any
-				one-directional zipper into bi-directional. Again generically.
+				私の <code class="prettyprint lang-hs">Data.Map</code> ジッパーは前にしか進まない。
+				單中杰は一方向ジッパーを双方向にする方法を詳しく説明している。
+				またしても一般的である。
 			</p>
 		</dd>
 	</dl>
 
 	<br>
-	<h2><a name="zipper-fs">ジッパーベースのファイルサーバー／OS</a></h2>
+	<h2><a name="zipper-fs">ジッパーベースのファイルサーバーOS</a></h2>
 	<dl>
 		<dd>
 			<p>
-				We present a file server/OS with threading and exceptions realized
-				via delimited continuations. A file system is modeled as a nested
-				finite map, relying on zipper for navigation and updates.
-				The outcome looks like the Unix file system, with the improved
-				semantics: transactions; undo of any file and directory operation;
-				snapshots; statically guaranteed the strongest, repeatable read,
-				isolation mode for clients; pervasive copy-on-write for files and
-				directories; built-in traversal facility; the expected behavior for
-				cyclic directory references.
+				私はファイルサーバーOSに、限定継続を通して知ることのできるスレッディングと例外を与える。
+				ファイルシステムは、入れ子になった有限マップが、移動と更新のためのジッパーに依存しているものとしてモデル化されている。
+				結果として、Unix のファイルシステムによりよい意味論を持たせたようなものとなる。
+				これは次のものを含む：
+				トランザクション；
+				ファイルやディレクトリに対する任意の操作の取り消し；
+				スナップショット；
+				静的に保証された、最強の、読み取りを繰り返せる、クライアントのための分離モード；
+				ファイルとディレクトリに対する広域的なコピーオンライト；
+				組み込みの走査設備；
+				ディレクトリへの循環参照に対する期待された振る舞い。
 			</p>
 			<p>
-				We can easily change our file server to support NFS or 9P or
-				other distributed file system protocol. We can traverse richer terms than
-				mere finite maps with string keys. In particular, we can use
-				lambda-terms as our file system: one could <code class="prettyprint lang-hs">cd</code> into a lambda-term in
-				<code class="prettyprint lang-hs">bash</code>.
+				ここで紹介するファイルサーバーは、NFSや9Pなどの分散ファイルシステムプロトコルをサポートするように改造することが、容易にできる。
+				単なる文字列をキーとする有限マップを、より豊かな文脈に言い換える。
+				特に、ラムダ項をこのファイルシステムに使うことができる ―― <code class="prettyprint lang-hs">bash</code> のラムダ項の中で <code class="prettyprint lang-hs">cd</code> できるのだ。
 			</p>
 			<p>
-				The implementation of ZipperFS has no unsafe operations, no GHC let
-				alone Unix threads, and no concurrency problems. Our threads cannot even
-				do IO and cannot mutate any global state --- and <em>the type
-				system sees to it</em>.  We thus demonstrate how delimited
-				continuations let us statically isolate effects even if the whole
-				program eventually runs in the IO monad.
+				ZipperFS のこの実装は、危険な操作、GHC（Unix のスレッドは言うまでもない）、並行性の問題を含まない。
+				このスレッドは入出力すらできないしグローバルな状態遷移もできない ―― <strong>型システムがこのことを保証しているのだ</strong>。
+				ゆえに、限定継続が、プログラム全体が結果として IO モナドの中で動くとしても静的に副作用を切り離せるようにする過程を検証している。
 			</p>
 		</dd>
-		<dt><strong>Version</strong></dt>
-		<dd>The current version is February 2011.</dd>
-		<dt><strong>References</strong></dt>
+		<dt><strong>バージョン</strong></dt>
+		<dd>2011年2月版</dd>
+		<dt><strong>参考文献</strong></dt>
 		<dd>
 			<a href="zfs-talk.pdf">zfs-talk.pdf</a> [98K]
 			<br>
-			Expanded talk with the demo. It was originally presented as an extra demo at the Haskell Workshop 2005
+			デモ付きの拡大版のお話。
+			もともとは 2005 年の Haskell ワークショップで追加のデモとして発表されたものである。
 			<p>
 				<a href="ZFS.hs.html">ZFS.hs</a> [18K]
 				<br>
-				The commented source code of the interrupt handler, scheduling loop, and the shell.
+				中断ハンドラ、計画ループ、シェルのコメント付きのソースコード。
 				<br>
-				The code has tested with GHC 6.4-6.10 on FreeBSD and Linux.
+				このコードは FreeBSD と Linux 上で GHC 6.4-6.10 においてテストされている。
 			</p>
 			<p>
 				<a href="ZipperM.hs.html">ZipperM.hs</a> [8K]
 				<br>
-				Zipper over the nested Map with path accumulation and sharing preservation
+				パスの蓄積と共有された保存のある入れ子になったマップに対するジッパー。
 			</p>
 			<p>
 				<a href="LowLevelIO.hs.html">LowLevelIO.hs</a> [4K]
 				<br>
-				Low-level IO operations, specifically, <code class="prettyprint lang-hs">select</code>
+				低級の入出力操作。詳しく言えば、<code class="prettyprint lang-hs">select</code>。
 				<br>
-				(also used by the Iteratee library)
+				（Iteratee ライブラリでも使われている。）
 			</p>
 		</dd>
 	</dl>
@@ -234,129 +229,84 @@
 			<p>
 				[論文のアブストラクト]
 				<br>
-				<strong>限定継続</strong>はプログラミング言語の限定された評価文脈を意味する。
-
-				<em>Delimited continuations</em> are the meanings of delimited
-				evaluation contexts in programming languages.  We show they offer a
-				uniform view of many scenarios that arise in systems programming, such
-				as a request for a system service, an event handler for input/output,
-				a snapshot of a process, a file system being read and updated, and a
-				Web page. Explicitly recognizing these uses of delimited
-				continuations helps us design a system of concurrent, isolated
-				transactions where desirable features such as snapshots, undo,
-				copy-on-write, reconciliation, and interposition fall out by default.
-				It also lets us take advantage of efficient implementation techniques
-				from programming-language research.  The Zipper File System
-				prototypes these ideas.
+				<strong>限定継続</strong>はプログラミング言語の限定された評価文脈の意味である。
+				限定継続が、システムプログラミングで現れる多くの状況 ―― システムサービスのリクエスト、入出力のイベントハンドラ、プロセスのスナップショット、ファイルシステムに対する読み書き、ウェブページなど ―― についての統一的な見方を与えるということを示す。
+				限定継続のこれらの使い方をはっきりと認識することで、並行で、分離していて、理想的な特性 ―― スナップショット、巻き戻し、コピーオンライト、調整、介入 ―― がデフォルトで得られるような、トランザクションのシステムが設計しやすくなる。
+				プログラミング言語の研究からの効率的な実装テクニックを利用できるようにもなる、
+				ジッパーファイルシステムはこれらのアイデアの試作品である。
 			</p>
 			<p>
 				單中杰との共著。
-				Joint work with Chung-chieh Shan.
 			</p>
 			<p>
-				Olivier Danvy has very kindly pointed out that continuations
-				in operating systems delimited at process, job, etc. boundaries were
-				first mentioned back in 1974 in the seminal work by Christopher
-				Strachey and Christopher P. Wadsworth `Continuations: A
-				mathematical semantics for handling full jumps.' Technical Monograph
+				オリヴィエ＝ダンヴィは親切にも、プロセスやジョブなどの境界で区切られたオペレーティングシステムにおける継続が、1974年、クリストファー＝ストラッチーとクリストファー P. ワズワースの独創性に富んだ論文『継続：フルジャンプを扱う数学的意味論』(Technical Monograph
 				PRG-11, Programming Research Group, Oxford University Computing
 				Laboratory, 1974. Reprinted in Higher-Order and Symbolic Computation, 2000,
-				13(1-2):135-152. Here is footnote 1 from their paper:
+				13(1-2):135-152.) で初めて述べられた、ということを指摘してくれた。
+				これはその論文の脚注1だ。
 			</p>
-
 			<dl>
 				<dd>
-					The reader may ask if it is any more justifiable to
-					take a single program in isolation than it is to take a single
-					command. The answer, of course, is that it is not, and that in the
-					same way as command continuations are needed to explain jumps inside
-					programs, further hierarchical levels of continuations, such as
-					process continuations, job continuations and operating system
-					continuations, will be needed to give the semantics of the operating
-					system. The outer-most level (or possibly levels) are not inside the
-					machine at all and are implemented by operator intervention.  We do
-					not discuss the use of continuations in the semantics of operating
-					systems any further in this paper as to do so would require a fuller
-					understanding of the differences between operating systems and
-					programs that is yet at our disposal. It would also make the paper
-					much too long...
+					単一のコマンドを取るより分離された単一のプログラムを取るほうが正当であるか、とあなたは問うかもしれない。
+					答えはもちろんそうではなく、コマンドの継続がプログラム中のジャンプを説明する必要があるのと同様に、継続のより高度な階層的レベル ―― プロセスの継続、ジョブの継続、オペレーティングシステムの継続など ―― はオペレーティングシステムの意味論を与えるためには必要となるのだ。
+					いちばん外側のレベルは機械の内部にあるわけでは全くなく、オペレーターの干渉によって実装されている。
+					私たちは、この論文でオペレーティングシステムの意味論における継続の利用については議論しない。そうするためには、オペレーティングシステムとプログラムの私たちが未だに理解しきれていない違いをより深く理解する必要があるからだ。
+					しかもこの論文があまりに長くなってしまうだろう……
 				</dd>
 			</dl>
 		</dd>
-		<dt><strong>Version</strong></dt>
-		<dd>The current version is 1.2, June 1, 2007.</dd>
-		<dt><strong>References</strong></dt>
-		<dd><a href="ZFS/context-OS.pdf">context-OS.pdf</a> [134K]
+		<dt><strong>バージョン</strong></dt>
+		<dd>バージョン1.2、2007年6月1日版</dd>
+		<dt><strong>参考文献</strong></dt>
+		<dd><a href="context-OS.pdf">context-OS.pdf</a> [134K]
 			<br>
 			Proc. CONTEXT2007: 6th International and Interdisciplinary Conference on Modeling and Using Context. Roskilde, Denmark, August 20-24, 2007. Lecture Notes in Artificial Intelligence 4635, pp. 291-302.
-			<p>
-				Poster presented at CONTEXT 2007, Roskilde U., Denmark, August 22, 2007.
-				<br>
-				<a href="http://www.cs.rutgers.edu/~ccshan/zipper/poster.ps">&lt; http://www.cs.rutgers.edu/~ccshan/zipper/poster.ps &gt;</a>
-			</p>
 		</dd>
 	</dl>
 
 	<br>
-	<h2><a name="zipper-diff">複数のデータ構造を比較し注釈を付けるためにジッピングする</a></h2>
+	<h2><a name="zipper-diff">ジッピングして複数のデータ構造を比較し注釈を付ける</a></h2>
 	<dl>
 		<dd>
-			Zipping through two data structures to compare them side-by-side and
-			annotate the differing components is a more interesting, and practical
-			application of zippers, highlighting the incremental traversal and the
-			functional update. The example has been motivated by a practical
-			application to compare two XML documents disregarding the inline
-			markup. To process large XML documents the processing has to be done
-			inplace, minimizing copying and rebuilding of the DOM tree (SXML
-			document).  If two documents are the same, modulo the inline markup,
-			the comparison procedure returns the original documents as they are,
-			with no copying of the DOM tree or its branches. The example is a
-			non-trivial generalization of the ``same fringe problem'' -- not only
-			do we detect a single difference, we return the updated documents
-			where each paragraph with the difference in character content
-			is marked.
+			二つのデータ構造でジッピングし、それらを比較して、異なる要素に注釈を付けるのは、増分走査 (incremental traversal) と関数的な更新を目立たせていて、ジッパーのより興味深く実用的な応用である。
+			以下の例はインラインのマークアップに関わらずに二つのXML文書を比較するという実用的な応用に刺激されている。
+			大きいXML文書を加工するには、その加工はインプレースで、DOMツリー（SXML文書）の複製と再構築を最小限にしてなされなければならない。
+			二つの文書が、インラインのマークアップの違いを除いて同じであるならば、比較手続きはオリジナルの文書をそのまま、DOMツリーや楚の枝をコピーすること無しに返す。
+			この例は、「末端が同じか問題」(same fringe problem) ―― 単一の違いを検知するだけでなく、違う文字内容の段落がマークされている更新された文書を返す ―― の非自明な一般化である。
 		</dd>
-
-		<dt><strong>Version</strong></dt>
-		<dd>The current version is 1.1, August 23, 2005.</dd>
-		<dt><strong>References</strong></dt>
-		<dd><a href="../Scheme/xml.html#SXML-diff">Joint processing of two immutable SXML documents with update cursors</a></dd>
+		<dt><strong>バージョン</strong></dt>
+		<dd>バージョン1.1、2005年8月23日版</dd>
 	</dl>
 
 	<br>
 	<h2><a name="zipper2">複数の穴を持つジッパー</a></h2>
 	<dl>
 		<dd>
-			Suspending the traversal of a term gives us zipper for the term.
-			Suspending several concurrent traversals of the term gives us
-			zipper with several holes. Concurrent traversals are based
-			on delimited continuations, which let us view a single-threaded program
-			as cooperatively multi-threading. We support various isolation
-			modes of concurrent traversals: from ``uncommitted read'' to
-			``repeatable read'' to ``serializable'' -- and even
-			sub-transactions. We can use either the push mode -- one cursor
-			broadcasting its updates to the others -- or the pull mode. A cursor may
-			decide to broadcast the accumulated updates at arbitrary checkpoints of its
-			own choosing. A cursor may examine updates made by the other cursor
-			and perhaps disregard some of them -- or apply in a different order,
-			after its own updates.  We are using terms zipper, cursor and
-			transaction somewhat interchangeably: a zipper is a cursor which is by
-			default isolated from the others and whose updates are instantly
-			reversible.
+			項の走査を保留することでその項に対するジッパーが得られる。
+			項のいくつかの並行な走査を保留することによっていくつかの穴を持つジッパーが得られる。
+			並行な走査は、単一スレッドのプログラムを協調的なマルチスレッディングのプログラムとして見えるようにする、限定継続に基づいている。
+			私は、並行な走査の様々な分離モード ―― 「コミットされていない読取」「繰り返せる読み取り」「直列可能 (serializable)」そしてサブトランザクションまで ―― をサポートする。
+			プッシュモード ―― 一つのカーソルが自身の更新を他のカーソルすべてに伝える ―― とプルモードのどちらでも使える。
+			カーソルは、自ら決めた任意の時点で蓄積した更新を他のカーソルに伝えることができる。
+			カーソルは、他のカーソルのなした更新を確かめることもできるし、そのいくつかを無視する、あるいは違う順番で適用することもできる。
+			私は、ジッパー、カーソル、トランザクションという語をいくぶんか相互に交換可能な意味合いで使っている。
+			ジッパーは、他のカーソルからデフォルトで分離されていて、その更新がすぐさま元に戻せるような、カーソルなのである。
 		</dd>
-		<dt><strong>Version</strong></dt>
-		<dd>The current version is February 2011.</dd>
-		<dt><strong>References</strong></dt>
+		<dt><strong>バージョン</strong></dt>
+		<dd>2011年2月版</dd>
+		<dt><strong>参考文献</strong></dt>
 		<dd>
 			<a href="../Haskell/Zipper2.lhs.html">Zipper2.lhs</a> [22K]
 			<br>
-			The detailed, commented code, originally posted as <cite>Two-hole zippers and transactions of various isolation modes</cite> on the Haskell mailing list on Tue, 10 May 2005 23:11:06 -0700 (PDT). The new version of the code uses the <code class="prettyprint lang-hs">delimcc</code> library.
+			詳しい、コメント付きのコード。
+			このコードはもともと Haskell メーリングリストに <cite>Two-hole zippers and transactions of various isolation modes</cite> として 2005/5/10 (火) 23:11:06 -0700 (PDT) に投稿された。
+			この新しいバージョンのコードは delimcc ライブラリを使っている。
 		</dd>
 	</dl>
 	<br>
 	<div><hr></div>
 	<div align="center">
-		<h3>原文の最終更新は2011年5月4日、訳文の最終更新は2014年6月2日</h3>
+		<h3>原文の最終更新は2011年5月4日、訳文の最終更新は2014年6月4日</h3>
 		<p>
 			原文は <a href="http://okmij.org/ftp/continuations/zipper.html">http://okmij.org/ftp/continuations/zipper.html</a>
 			<br>
