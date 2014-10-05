@@ -1,0 +1,13 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>cluss-0.1: simple alternative to type classes</title><link href="ocean.css" rel="stylesheet" type="text/css" title="Ocean" /><script src="haddock-util.js" type="text/javascript"></script><script type="text/javascript">//<![CDATA[
+window.onload = function () {pageLoad();};
+//]]>
+</script></head><body><div id="package-header"><ul class="links" id="page-menu"><li><a href="index.html">Contents</a></li><li><a href="doc-index.html">Index</a></li></ul><p class="caption">cluss-0.1: simple alternative to type classes</p></div><div id="content"><div id="description"><h1>cluss-0.1: simple alternative to type classes</h1><div class="doc"><p>A <em>cluss</em> enables you to achieve <em>function overloading</em>, or ad-hoc polymorphism,
+without creating a new type class.</p><p>In order to give ad-hoc polymorphism to a type variable <code>a</code>,
+you simply use <code>In</code> with a list of &quot;type patterns&quot; like <code>In [Type T, ...] a</code>,
+which indicates that the type matches some of the patterns;
+which is analogous to a type class indicating that a type matches some of its &quot;instances&quot;.
+The constraint <code>In [Type T, ...] a</code> is what we call a &quot;cluss&quot;.</p><p>Cluss instances are <em>closed</em> and cluss methods are <em>open</em>,
+unlike type classes, whose instances are open and whose methods are closed.</p><p>Clusses can easily be used in a nested way,
+and can even be <em>recursive</em>, just like recursive type classes,
+and therefore clusses are expressive enough to imitate Haskell-98-style type classes.</p><p>More information can be found in the Haddock or the comments in the source code.
+The hackage is here: <a href="http://hackage.haskell.org/package/cluss">http://hackage.haskell.org/package/cluss</a>.</p></div></div><div id="module-list"><p class="caption">Modules</p><ul><li><span id="control.n.1" class="module collapser" onclick="toggleSection('n.1')">Type</span><ul id="section.n.1" class="show"><li><span class="module"><a href="Type-Cluss.html">Type.Cluss</a></span></li></ul></li></ul></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.14.3</p></div></body></html>
